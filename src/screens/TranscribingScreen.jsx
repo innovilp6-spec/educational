@@ -1,34 +1,65 @@
 import React, { useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import useTranscriptAPI from '../hooks/useTranscriptAPI';
 
 export default function TranscribingScreen({ route, navigation }) {
-  const { audioPath } = route.params;
+  const { masterTranscript } = route.params;
+  const { processTranscript } = useTranscriptAPI();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const success = true;
-      if (success) {
+    const processAndNavigate = async () => {
+      try {
+        // Process the master transcript (resolve word overlaps, etc.)
+        const processedTranscript = await processTranscript(masterTranscript);
+        
+        // Navigate to NameSession with the processed transcript
         navigation.replace('NameSession', {
-          audioPath,
-          transcript: 'This is a dummy transcript of the lecture.',
+          audioPath: null, // Not used in new flow
+          transcript: processedTranscript,
         });
-      } else {
-        navigation.replace('Error', { audioPath });
+      } catch (error) {
+        console.error('Error processing transcript:', error);
+        // On error, still navigate with the unprocessed transcript
+        navigation.replace('NameSession', {
+          audioPath: null,
+          transcript: masterTranscript,
+        });
       }
-    }, 2000);
+    };
+
+    const timer = setTimeout(() => {
+      processAndNavigate();
+    }, 1000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [masterTranscript, navigation, processTranscript]);
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" />
-      <Text style={styles.text}>Generating transcript…</Text>
+      <ActivityIndicator size="large" color="#1976d2" />
+      <Text style={styles.text}>Processing transcript…</Text>
+      <Text style={styles.subText}>Resolving word overlaps and optimizing text...</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  text: { marginTop: 16, fontSize: 16 },
+  container: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  text: { 
+    marginTop: 16, 
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  subText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#666',
+  },
 });
+

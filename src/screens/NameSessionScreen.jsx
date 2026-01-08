@@ -1,39 +1,25 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import RNFS from 'react-native-fs';
 import PrimaryButton from '../components/PrimaryButton';
 
 export default function NameSessionScreen({ navigation, route }) {
-  const { audioPath, transcript } = route.params;
+  const { transcript } = route.params;
   const [name, setName] = useState('');
 
   const handleSave = async () => {
     const sessionName = name || `Lecture_${new Date().toDateString()}`;
-    const folderPath = `${RNFS.DocumentDirectoryPath}/${sessionName}`;
 
     try {
-      // Create the folder
-      await RNFS.mkdir(folderPath);
-
-      // Define paths for the audio and transcript files
-      const audioFilePath = `${folderPath}/audio.m4a`;
-      const transcriptFilePath = `${folderPath}/transcript.txt`;
-
-      // Copy the audio file to the folder
-      await RNFS.copyFile(audioPath, audioFilePath);
-
-      // Save the transcript to a text file
-      await RNFS.writeFile(transcriptFilePath, transcript, 'utf8');
-
-      // Navigate to the Transcript Viewer screen with the saved paths
+      // Navigate to the Transcript Viewer screen with the session name and transcript
+      // Note: In the new flow, we don't save files to storage yet
+      // You can add file saving logic here later if needed
       navigation.replace('TranscriptViewer', {
         sessionName,
-        audioFilePath,
-        transcriptFilePath,
+        transcript,
       });
     } catch (error) {
-      console.error('Error saving files:', error);
-      Alert.alert('Error', 'Failed to save the files.');
+      console.error('Error saving session:', error);
+      Alert.alert('Error', 'Failed to save the session.');
     }
   };
 
@@ -61,5 +47,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     padding: 12,
     marginBottom: 20,
+    borderRadius: 8,
   },
 });
+
