@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, Button, StyleSheet } from 'react-native';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import RNFS from 'react-native-fs';
 import PrimaryButton from '../components/PrimaryButton';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
 
-const player = new AudioRecorderPlayer();
-
 export default function TranscriptViewerScreen({ route }) {
     const { sessionName, audioFilePath, transcriptFilePath } = route.params;
     const [transcript, setTranscript] = useState('');
-    const [sound, setSound] = useState();
+    const [isPlaying, setIsPlaying] = useState(false);
+    const playerRef = useRef(new AudioRecorderPlayer());
     const { summarizeTranscript, isSummarizing } = useTranscriptAPI();
 
     // Load the transcript when the screen loads
@@ -24,10 +23,26 @@ export default function TranscriptViewerScreen({ route }) {
             }
         };
         loadTranscript();
+
+        // Cleanup player on unmount
+        return () => {
+            playerRef.current.stopPlayer();
+        };
     }, [transcriptFilePath]);
 
     const playAudio = async () => {
-        await player.startPlayer(audioFilePath);
+        try {
+            if (isPlaying) {
+                await playerRef.current.stopPlayer();
+                setIsPlaying(false);
+            } else {
+                await playerRef.current.startPlayer(audioFilePath);
+                setIsPlaying(true);
+            }
+        } catch (error) {
+            console.error('Error playing audio:', error);
+            alert('Error playing audio: ' + error.message);
+        }
     };
 
     const handleSummary = async (summaryType) => {
@@ -47,7 +62,7 @@ export default function TranscriptViewerScreen({ route }) {
         <View style={styles.container}>
             <Text style={styles.title}>{sessionName}</Text>
 
-            <PrimaryButton title="Play Recording" onPress={playAudio} />
+            <PrimaryButton title={isPlaying ? "Stop Recording" : "Play Recording"} onPress={playAudio} />
 
             <View style={styles.buttonContainer}>
                 <PrimaryButton title="Read Full Transcript" onPress={() => alert(transcript)} />
