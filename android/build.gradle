@@ -7,6 +7,7 @@ buildscript {
         ndkVersion = "26.1.10909125"
         kotlinVersion = "1.9.22"
     }
+    
     repositories {
         google()
         mavenCentral()
@@ -15,6 +16,14 @@ buildscript {
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+    }
+}
+
+subprojects {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = "17"
+        }
     }
 }
 
