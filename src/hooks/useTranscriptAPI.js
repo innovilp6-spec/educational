@@ -531,6 +531,190 @@ export default function useTranscriptAPI() {
         }
     };
 
+    // ===================================
+    // SUGAMYA PUSTAKALAYA FUNCTIONS
+    // ===================================
+
+    // Get available search filters
+    const getSugamyaFilters = async () => {
+        try {
+            setIsProcessing(true);
+            console.log("Fetching Sugamya filters");
+
+            const response = await makeServerRequest(
+                `/api/sugamya/filters`,
+                "GET"
+            );
+
+            console.log("Sugamya filters:", response);
+            return response.filters;
+        } catch (err) {
+            console.error("Error fetching Sugamya filters:", err);
+            throw err;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Search books with filters (agentic)
+    const searchSugamyaBooks = async (filters = {}) => {
+        try {
+            setIsProcessing(true);
+            console.log("Searching Sugamya books with filters:", filters);
+
+            const queryParams = new URLSearchParams();
+            if (filters.grade) queryParams.append('grade', filters.grade);
+            if (filters.language) queryParams.append('language', filters.language);
+            if (filters.title) queryParams.append('title', filters.title);
+            if (filters.category) queryParams.append('category', filters.category);
+            if (filters.format) queryParams.append('format', filters.format);
+            if (filters.page) queryParams.append('page', filters.page);
+            if (filters.limit) queryParams.append('limit', filters.limit);
+
+            const response = await makeServerRequest(
+                `/api/sugamya/search?${queryParams.toString()}`,
+                "GET"
+            );
+
+            console.log("Sugamya search results:", response);
+            return response;
+        } catch (err) {
+            console.error("Error searching Sugamya books:", err);
+            throw err;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Get popular books
+    const getSugamyaPopularBooks = async () => {
+        try {
+            setIsProcessing(true);
+            console.log("Fetching Sugamya popular books");
+
+            const response = await makeServerRequest(
+                `/api/sugamya/popular`,
+                "GET"
+            );
+
+            console.log("Sugamya popular books:", response);
+            return response.books || [];
+        } catch (err) {
+            console.error("Error fetching popular books:", err);
+            throw err;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Get books by language
+    const getSugamyaBooksByLanguage = async (language) => {
+        try {
+            setIsProcessing(true);
+            console.log("Fetching Sugamya books for language:", language);
+
+            const response = await makeServerRequest(
+                `/api/sugamya/language?language=${language}`,
+                "GET"
+            );
+
+            console.log("Sugamya books by language:", response);
+            return response.books || [];
+        } catch (err) {
+            console.error("Error fetching books by language:", err);
+            throw err;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Get book details
+    const getSugamyaBookDetails = async (bookId) => {
+        try {
+            setIsProcessing(true);
+            console.log("Fetching Sugamya book details:", bookId);
+
+            const response = await makeServerRequest(
+                `/api/sugamya/book/${bookId}`,
+                "GET"
+            );
+
+            console.log("Sugamya book details:", response);
+            return response.book;
+        } catch (err) {
+            console.error("Error fetching book details:", err);
+            throw err;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Request book download
+    const requestSugamyaDownload = async (bookId, format = null) => {
+        try {
+            setIsProcessing(true);
+            console.log("Requesting Sugamya book download:", bookId, format);
+
+            const response = await makeServerRequest(
+                `/api/sugamya/download`,
+                "POST",
+                { bookId, format }
+            );
+
+            console.log("Download request created:", response);
+            return response.download;
+        } catch (err) {
+            console.error("Error requesting download:", err);
+            throw err;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Get download history and status
+    const getSugamyaDownloads = async (downloadId = null) => {
+        try {
+            setIsProcessing(true);
+            console.log("Fetching Sugamya downloads");
+
+            const query = downloadId ? `?downloadId=${downloadId}` : '';
+            const response = await makeServerRequest(
+                `/api/sugamya/downloads${query}`,
+                "GET"
+            );
+
+            console.log("Sugamya downloads:", response);
+            return response.downloads || [];
+        } catch (err) {
+            console.error("Error fetching downloads:", err);
+            throw err;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Update format preferences
+    const updateSugamyaFormatPreferences = async (formats) => {
+        try {
+            setIsProcessing(true);
+            console.log("Updating Sugamya format preferences:", formats);
+
+            const response = await makeServerRequest(
+                `/api/sugamya/preferences`,
+                "PUT",
+                { formats }
+            );
+
+            console.log("Format preferences updated:", response);
+            return response.preferences;
+        } catch (err) {
+            console.error("Error updating format preferences:", err);
+            throw err;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     return {
         isAuthenticating,
         isSummarizing,
@@ -555,6 +739,15 @@ export default function useTranscriptAPI() {
         agenticGetUserNotes,
         agenticGetNote,
         agenticDeleteNote,
+        // Sugamya functions
+        getSugamyaFilters,
+        searchSugamyaBooks,
+        getSugamyaPopularBooks,
+        getSugamyaBooksByLanguage,
+        getSugamyaBookDetails,
+        requestSugamyaDownload,
+        getSugamyaDownloads,
+        updateSugamyaFormatPreferences,
     };
 }
 
