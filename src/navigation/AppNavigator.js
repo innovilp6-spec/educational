@@ -12,6 +12,8 @@ import ErrorScreen from '../screens/ErrorScreen';
 import NameSessionScreen from '../screens/NameSessionScreen';
 import TranscriptViewerScreen from '../screens/TranscriptViewerScreen';
 import RecordingsListScreen from '../screens/RecordingsListScreen';
+import AgenticCoachScreen from '../screens/AgenticCoachScreen';
+import AgenticNotesScreen from '../screens/AgenticNotesScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -30,6 +32,20 @@ export default function AppNavigator() {
             <Stack.Screen name="NameSession" component={NameSessionScreen} />
             <Stack.Screen name="TranscriptViewer" component={TranscriptViewerScreen} />
             <Stack.Screen name="RecordingsList" component={RecordingsListScreen} />
+            <Stack.Screen
+                name="AgenticCoach"
+                component={AgenticCoachScreen}
+                options={{
+                    title: 'Study with Coach',
+                }}
+            />
+            <Stack.Screen
+                name="Notes"
+                component={AgenticNotesScreen}
+                options={{
+                    title: 'Agentic Notes',
+                }}
+            />
         </Stack.Navigator>
     );
 }

@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import RNFS from 'react-native-fs';
 import PrimaryButton from '../components/PrimaryButton';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
 
-export default function TranscriptViewerScreen({ route }) {
-    const { sessionName, transcript } = route.params;
+export default function TranscriptViewerScreen({ route, navigation }) {
+    const { sessionName, transcript, transcriptId } = route.params;
     const [displayTranscript] = useState(transcript || '');
     const [quickSummary, setQuickSummary] = useState(null);
     const [detailedSummary, setDetailedSummary] = useState(null);
     const [currentView, setCurrentView] = useState('transcript'); // 'transcript', 'quick', 'detailed'
     const [isLoadingSummary, setIsLoadingSummary] = useState(false);
     const [summaryFolderPath, setSummaryFolderPath] = useState(null);
-    const { summarizeTranscript } = useTranscriptAPI();
+    const { generateSummary } = useTranscriptAPI();
 
     useEffect(() => {
         initializeSummaryFolder();
@@ -73,8 +73,9 @@ export default function TranscriptViewerScreen({ route }) {
         }
     };
 
-    const generateSummary = async (summaryType) => {
-        if (!displayTranscript) {
+    const handleGenerateSummary = async (summaryType) => {
+        if (!displayTranscript || !transcriptId) {
+            Alert.alert('Error', 'Unable to generate summary. Transcript ID is missing.');
             return;
         }
 
@@ -88,11 +89,12 @@ export default function TranscriptViewerScreen({ route }) {
             return;
         }
 
-        // Generate new summary via API
+        // Generate new summary via server API
         try {
             setIsLoadingSummary(true);
-            console.log(`Generating ${summaryType} summary...`);
-            const summary = await summarizeTranscript(displayTranscript, summaryType);
+            console.log(`Generating ${summaryType} summary from server for transcript ${transcriptId}...`);
+            
+            const summary = await generateSummary(transcriptId, summaryType);
             
             if (summaryType === 'quick') {
                 setQuickSummary(summary);
@@ -105,6 +107,7 @@ export default function TranscriptViewerScreen({ route }) {
             }
         } catch (err) {
             console.error(`Error generating ${summaryType} summary:`, err);
+            Alert.alert('Error', `Failed to generate ${summaryType} summary. Please try again.`);
         } finally {
             setIsLoadingSummary(false);
         }
@@ -147,7 +150,7 @@ export default function TranscriptViewerScreen({ route }) {
                 </View>
             )}
 
-            <View style={[styles.buttonContainer, buttonsDisabled && styles.buttonContainerDisabled]}>
+            <View style={styles.buttonContainer}>
                 <PrimaryButton 
                     title="Transcript" 
                     onPress={() => setCurrentView('transcript')}
@@ -155,12 +158,12 @@ export default function TranscriptViewerScreen({ route }) {
                 />
                 <PrimaryButton 
                     title="Quick Summary" 
-                    onPress={() => generateSummary('quick')}
+                    onPress={() => handleGenerateSummary('quick')}
                     disabled={buttonsDisabled}
                 />
                 <PrimaryButton 
                     title="Detailed Summary" 
-                    onPress={() => generateSummary('detailed')}
+                    onPress={() => handleGenerateSummary('detailed')}
                     disabled={buttonsDisabled}
                 />
             </View>
@@ -172,6 +175,19 @@ export default function TranscriptViewerScreen({ route }) {
                         {getDisplayContent()}
                     </Text>
                 </ScrollView>
+            </View>
+
+            <View style={styles.studyButtonContainer}>
+                <PrimaryButton 
+                    title="Study with Coach" 
+                    onPress={() => navigation.navigate('AgenticCoach', {
+                        transcriptId,
+                        sessionName,
+                        contextType: 'recording',
+                        transcript: displayTranscript,
+                    })}
+                    disabled={buttonsDisabled}
+                />
             </View>
         </View>
     );
@@ -205,10 +221,12 @@ const styles = StyleSheet.create({
     },
     buttonContainer: { 
         marginBottom: 16,
-        opacity: 1,
     },
-    buttonContainerDisabled: {
-        opacity: 0.5,
+    studyButtonContainer: {
+        marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#ddd',
     },
     transcriptSection: {
         flex: 1,
