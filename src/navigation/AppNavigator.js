@@ -14,6 +14,10 @@ import TranscriptViewerScreen from '../screens/TranscriptViewerScreen';
 import RecordingsListScreen from '../screens/RecordingsListScreen';
 import AgenticCoachScreen from '../screens/AgenticCoachScreen';
 import AgenticNotesScreen from '../screens/AgenticNotesScreen';
+import CapturedBooksLibraryScreen from '../screens/CapturedBooksLibraryScreen';
+import BookCameraScreen from '../screens/BookCameraScreen';
+import BookProcessingScreen from '../screens/BookProcessingScreen';
+import BookDetailScreen from '../screens/BookDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -44,6 +48,34 @@ export default function AppNavigator() {
                 component={AgenticNotesScreen}
                 options={{
                     title: 'Agentic Notes',
+                }}
+            />
+            <Stack.Screen
+                name="CapturedBooksLibrary"
+                component={CapturedBooksLibraryScreen}
+                options={{
+                    title: 'My Captured Books',
+                }}
+            />
+            <Stack.Screen
+                name="BookCamera"
+                component={BookCameraScreen}
+                options={{
+                    title: 'Capture Book Pages',
+                }}
+            />
+            <Stack.Screen
+                name="BookProcessing"
+                component={BookProcessingScreen}
+                options={{
+                    title: 'Processing Book',
+                }}
+            />
+            <Stack.Screen
+                name="BookDetail"
+                component={BookDetailScreen}
+                options={{
+                    title: 'Read Book',
                 }}
             />
         </Stack.Navigator>
