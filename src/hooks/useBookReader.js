@@ -85,9 +85,11 @@ const useBookReader = (textArray3D = []) => {
         if (mode === 'sentence') {
             moveToNextSentenceInternal(page, para, sent, array3D);
         } else if (mode === 'paragraph') {
-            moveToNextParagraphInternal(page, para, sent, array3D);
+            // moveToNextParagraphInternal(page, para, sent, array3D);
+            moveToNextSentenceInternal(page, para, sent, array3D);
         } else if (mode === 'page') {
-            moveToNextPageInternal(page, para, sent, array3D);
+            // moveToNextPageInternal(page, para, sent, array3D);
+            moveToNextSentenceInternal(page, para, sent, array3D);
         }
     }, [moveToNextSentenceInternal, moveToNextParagraphInternal, moveToNextPageInternal]);
 
@@ -123,51 +125,53 @@ const useBookReader = (textArray3D = []) => {
     );
 
     /**
-     * Speak a specific sentence - accepts array3D as parameter to avoid closure issues
+     * Speak a specific sentence - NOT memoized to always have fresh ref access
+     * Accepts array3D as parameter to avoid closure issues
      */
-    const speakSentence = useCallback(
-        (page, para, sent, array3D = null) => {
-            // Use provided array or fall back to ref
-            const targetArray = array3D || textArray3DRef.current;
-            
-            if (!isValidIndicesInArray(page, para, sent, targetArray)) {
-                console.log('[useBookReader] Invalid indices:', { page, para, sent });
-                console.log('[useBookReader] Target array structure:', {
-                    pages: targetArray.length,
-                    paras: targetArray[page]?.length,
-                    sentences: targetArray[page]?.[para]?.length,
-                });
-                return false;
-            }
+    const speakSentence = (page, para, sent, array3D = null) => {
+        // Use provided array or fall back to ref
+        const targetArray = array3D || textArray3DRef.current;
 
-            const sentence = targetArray[page][para][sent];
-            setCurrentPage(page);
-            setCurrentParagraph(para);
-            setCurrentSentence(sent);
+        if (!isValidIndicesInArray(page, para, sent, targetArray)) {
+            console.log('[useBookReader] Invalid indices:', { page, para, sent });
+            console.log('[useBookReader] Target array structure:', {
+                pages: targetArray.length,
+                paras: targetArray[page]?.length,
+                sentences: targetArray[page]?.[para]?.length,
+            });
+            return false;
+        }
 
-            Tts.stop();
-            try {
-                Tts.speak(sentence);
-            } catch (error) {
-                console.log('[useBookReader] TTS speak error:', error);
-            }
-            return true;
-        },
-        [isValidIndicesInArray]
-    );
+        const sentence = targetArray[page][para][sent];
+        
+        // ALWAYS update UI position, regardless of speaking state
+        setCurrentPage(page);
+        setCurrentParagraph(para);
+        setCurrentSentence(sent);
+
+        // ONLY speak if actually speaking and not paused
+        console.log('[useBookReader] speakSentence called - isSpeaking:', speakingRef.current, 'isPaused:', pausedRef.current);
+        if (!speakingRef.current || (speakingRef.current && pausedRef.current)) {
+            console.log('[useBookReader] Not speaking or paused, skipping audio playback');
+            return false;
+        }
+
+        Tts.stop();
+        try {
+            console.log('[useBookReader] Speaking:', sentence);
+            Tts.speak(sentence);
+        } catch (error) {
+            console.log('[useBookReader] TTS speak error:', error);
+        }
+        return true;
+    };
 
     /**
      * Internal method to move to next sentence
      */
     const moveToNextSentenceInternal = useCallback(
         (page, para, sent, array3D) => {
-            console.log("[useBookReader] Moving to next sentence from:", { page, para, sent });
-            console.log('[useBookReader] Current array3D structure:', {
-                totalPages: array3D.length,
-                currentPageParas: array3D[page]?.length || 0,
-                currentParaSentences: array3D[page]?.[para]?.length || 0,
-                currentParaContent: array3D[page]?.[para],
-            });
+
 
             if (!array3D[page]) {
                 console.log('[useBookReader] Page not found, stopping');
@@ -196,7 +200,7 @@ const useBookReader = (textArray3D = []) => {
                 stopReading();
             }
         },
-        [speakSentence]
+        [stopReading]
     );
 
     /**
@@ -222,7 +226,7 @@ const useBookReader = (textArray3D = []) => {
                 pauseReading();
             }
         },
-        [speakSentence, pauseReading, stopReading]
+        [pauseReading, stopReading]
     );
 
     /**
@@ -236,7 +240,7 @@ const useBookReader = (textArray3D = []) => {
                 pauseReading();
             }
         },
-        [speakSentence, pauseReading]
+        [pauseReading]
     );
 
     /**
@@ -298,7 +302,7 @@ const useBookReader = (textArray3D = []) => {
             const prevSent = array3D[page - 1][prevPageLastPara].length - 1;
             speakSentence(page - 1, prevPageLastPara, prevSent, array3D);
         }
-    }, [speakSentence]);
+    }, []);
 
     /**
      * Move to previous paragraph
@@ -318,7 +322,7 @@ const useBookReader = (textArray3D = []) => {
             const prevPageLastPara = array3D[page - 1].length - 1;
             speakSentence(page - 1, prevPageLastPara, 0, array3D);
         }
-    }, [speakSentence]);
+    }, []);
 
     /**
      * Move to previous page
@@ -330,12 +334,14 @@ const useBookReader = (textArray3D = []) => {
         if (page > 0) {
             speakSentence(page - 1, 0, 0, array3D);
         }
-    }, [speakSentence]);
+    }, []);
 
     /**
      * Start reading from current position
      */
     const startReading = useCallback(() => {
+        speakingRef.current = true;
+        pausedRef.current = false;
         setIsSpeaking(true);
         setIsPaused(false);
         speakSentence(
@@ -343,7 +349,7 @@ const useBookReader = (textArray3D = []) => {
             currentParagraphRef.current,
             currentSentenceRef.current
         );
-    }, [speakSentence]);
+    }, []);
 
     /**
      * Pause reading (keep position)
@@ -357,13 +363,14 @@ const useBookReader = (textArray3D = []) => {
      * Resume reading from current position
      */
     const resumeReading = useCallback(() => {
+        pausedRef.current = false;
         setIsPaused(false);
         speakSentence(
             currentPageRef.current,
             currentParagraphRef.current,
             currentSentenceRef.current
         );
-    }, [speakSentence]);
+    }, []);
 
     /**
      * Stop reading and reset position
