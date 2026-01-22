@@ -6,6 +6,8 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
+    Modal,
+    TextInput,
 } from 'react-native';
 import { useCameraPermission, Camera, useCameraDevice } from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';
@@ -17,6 +19,8 @@ const BookCameraScreen = ({ navigation }) => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [canCapture, setCanCapture] = useState(true);
     const [permissionStatus, setPermissionStatus] = useState(null);
+    const [showTitleModal, setShowTitleModal] = useState(false);
+    const [bookTitle, setBookTitle] = useState('');
     const cameraRef = useRef(null);
 
     const deviceBack = useCameraDevice('back');
@@ -118,7 +122,18 @@ const BookCameraScreen = ({ navigation }) => {
             return;
         }
 
-        console.log('[BookCamera] Processing', capturedImages.length, 'images');
+        // Show title input modal
+        setShowTitleModal(true);
+    };
+
+    const handleTitleConfirm = async () => {
+        if (!bookTitle.trim()) {
+            Alert.alert('Title Required', 'Please enter a title for your book.');
+            return;
+        }
+
+        setShowTitleModal(false);
+        console.log('[BookCamera] Processing', capturedImages.length, 'images with title:', bookTitle);
         setIsProcessing(true);
 
         try {
@@ -141,7 +156,7 @@ const BookCameraScreen = ({ navigation }) => {
             // Navigate to BookProcessingScreen
             navigation.replace('BookProcessing', {
                 images: base64Images,
-                title: 'Captured Book',
+                title: bookTitle,
                 category: 'other',
                 tags: [],
             });
@@ -150,6 +165,12 @@ const BookCameraScreen = ({ navigation }) => {
             Alert.alert('Error', 'Failed to process images. Please try again.');
             setIsProcessing(false);
         }
+    };
+
+    const handleTitleCancel = () => {
+        setShowTitleModal(false);
+        setBookTitle('');
+        setIsProcessing(false);
     };
 
     const clearCaptures = () => {
@@ -283,6 +304,66 @@ const BookCameraScreen = ({ navigation }) => {
                         : 'Tap Process to extract text'}
                 </Text>
             </View>
+
+            {/* Title Input Modal */}
+            <Modal
+                visible={showTitleModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={handleTitleCancel}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Book Title</Text>
+                        </View>
+
+                        <View style={styles.modalBody}>
+                            <Text style={styles.modalLabel}>
+                                What would you like to name this captured book?
+                            </Text>
+                            <TextInput
+                                style={styles.titleInput}
+                                placeholder="Enter book title..."
+                                placeholderTextColor="#999"
+                                value={bookTitle}
+                                onChangeText={setBookTitle}
+                                autoFocus={true}
+                                maxLength={100}
+                            />
+                            <Text style={styles.charCount}>
+                                {bookTitle.length}/100 characters
+                            </Text>
+                        </View>
+
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity
+                                style={styles.cancelButton}
+                                onPress={handleTitleCancel}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.confirmButton,
+                                    !bookTitle.trim() && styles.disabledConfirmButton,
+                                ]}
+                                onPress={handleTitleConfirm}
+                                disabled={!bookTitle.trim()}
+                            >
+                                <Text
+                                    style={[
+                                        styles.confirmButtonText,
+                                        !bookTitle.trim() && styles.disabledConfirmButtonText,
+                                    ]}
+                                >
+                                    Continue
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -431,6 +512,102 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 10,
         borderRadius: 8,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        width: '100%',
+        maxWidth: 400,
+        overflow: 'hidden',
+    },
+    modalHeader: {
+        backgroundColor: '#f5f5f5',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000',
+    },
+    modalBody: {
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+    },
+    modalLabel: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 16,
+        lineHeight: 20,
+    },
+    titleInput: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        fontSize: 16,
+        color: '#000',
+        marginBottom: 8,
+        backgroundColor: '#f9f9f9',
+    },
+    charCount: {
+        fontSize: 12,
+        color: '#999',
+        textAlign: 'right',
+        marginBottom: 16,
+    },
+    modalFooter: {
+        flexDirection: 'row',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+        gap: 10,
+    },
+    cancelButton: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    cancelButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#666',
+    },
+    confirmButton: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        backgroundColor: '#333',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    confirmButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#fff',
+    },
+    disabledConfirmButton: {
+        backgroundColor: '#ddd',
+    },
+    disabledConfirmButtonText: {
+        color: '#999',
     },
 });
 
