@@ -1,0 +1,23 @@
+Chapter 2: Introduction to JavaScript Variables
+JavaScript is a programming language used to make web pages interactive. One of the most important concepts in JavaScript is the variable. A variable is used to store data that can be used and changed later in a program.
+
+What is a Variable?
+A variable is a container for storing values. These values can be numbers, text, or more complex data. Each variable has a name and a value.For example, if we want to store a user’s age, we can create a variable called age and assign a number to it.
+
+Declaring Variables in JavaScript
+JavaScript provides three main keywords to declare variables:
+- var
+- let
+- const
+
+Using let: The let keyword is recommended in modern JavaScript. Variables declared with let can be updated but cannot be re-declared in the same scope.
+Using const: The const keyword is used for variables whose values should not change. Once assigned, the value of a const variable cannot be updated.
+
+Rules for Naming Variables
+Variable names must start with a letter, underscore (_), or dollar sign ($)
+They cannot start with a number
+They are case-sensitive (total and Total are different)
+They should be meaningful and easy to understand
+
+Why Variables Are Important
+Variables help make programs dynamic and flexible. Instead of writing fixed values, developers use variables to store user input, perform calculations, and control program behavior.

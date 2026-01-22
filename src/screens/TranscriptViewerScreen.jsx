@@ -183,7 +183,7 @@ export default function TranscriptViewerScreen({ route, navigation }) {
                     onPress={() => navigation.navigate('AgenticCoach', {
                         transcriptId,
                         sessionName,
-                        contextType: 'recording',
+                        contextType: 'lecture',
                         transcript: displayTranscript,
                     })}
                     disabled={buttonsDisabled}

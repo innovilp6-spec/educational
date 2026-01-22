@@ -168,7 +168,7 @@ export default function useTranscriptAPI() {
 
             console.log("Coach RAW response received:", JSON.stringify(response, null, 2));
 
-            // Server returns data in new standardized format: {success, data: {response, context, metadata}}
+            // Server returns data in standardized format: {success, data: {response, context, metadata}}
             if (response?.success && response?.data?.response?.answer) {
                 const normalizedResponse = {
                     _id: response.data?.metadata?.interactionId || new Date().getTime(),
@@ -193,11 +193,17 @@ export default function useTranscriptAPI() {
     };
 
     // Get coach interaction history
-    const getCoachHistory = async () => {
+    const getCoachHistory = async (contextId = null, contextType = null) => {
         try {
-            console.log("Getting coach history...");
+            console.log("Getting coach history...", { contextId, contextType });
 
-            const response = await makeServerRequest("/api/coach/agentic/history", "GET");
+            // Build query string
+            const params = new URLSearchParams();
+            if (contextId) params.append('contextId', contextId);
+            if (contextType) params.append('contextType', contextType);
+            
+            const queryString = params.toString() ? `?${params.toString()}` : '';
+            const response = await makeServerRequest(`/api/coach/agentic/history${queryString}`, "GET");
 
             console.log("Coach history retrieved:", response);
             return response.interactions || [];

@@ -11,6 +11,7 @@ import {
     TextInput,
 } from 'react-native';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import PrimaryButton from '../components/PrimaryButton';
 
 export default function NotesScreen({ navigation }) {
     const [notes, setNotes] = useState([]);
@@ -167,6 +168,18 @@ export default function NotesScreen({ navigation }) {
                         <Text style={styles.contentText}>{selectedNote.content}</Text>
                     </View>
                 </ScrollView>
+
+                <View style={styles.buttonContainer}>
+                    <PrimaryButton 
+                        title="Study with Coach" 
+                        onPress={() => navigation.navigate('AgenticCoach', {
+                            transcriptId: selectedNote._id,
+                            sessionName: selectedNote.title,
+                            contextType: 'note',
+                            transcript: selectedNote.content,
+                        })}
+                    />
+                </View>
             </View>
         );
     }
@@ -573,5 +586,11 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 14,
         fontWeight: '600',
+    },
+    buttonContainer: {
+        padding: 16,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
     },
 });

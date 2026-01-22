@@ -11,6 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@react-native-vector-icons/fontawesome';
 import useBookReader from '../hooks/useBookReader';
+import PrimaryButton from '../components/PrimaryButton';
 
 const API_BASE = 'http://10.0.2.2:5000/api';
 
@@ -271,6 +272,19 @@ const BookDetailScreen = ({ route, navigation }) => {
                 </View>
             </ScrollView>
 
+            {/* Study Coach Button */}
+            <View style={styles.coachButtonContainer}>
+                <PrimaryButton 
+                    title="Study with Coach" 
+                    onPress={() => navigation.navigate('AgenticCoach', {
+                        transcriptId: bookId,
+                        sessionName: book.title,
+                        contextType: 'book',
+                        transcript: book.fullText || currentParagraphText,
+                    })}
+                />
+            </View>
+
             {/* Bottom Controls */}
             <View style={styles.controlsArea}>
                 {/* Previous Paragraph Button */}
@@ -420,6 +434,13 @@ const styles = StyleSheet.create({
         lineHeight: 26,
         color: '#333',
         textAlign: 'justify',
+    },
+    coachButtonContainer: {
+        paddingHorizontal: 15,
+        paddingVertical: 10,
+        backgroundColor: '#f9f9f9',
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
     },
     sentence: {
         color: '#333',

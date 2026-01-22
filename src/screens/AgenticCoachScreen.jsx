@@ -49,9 +49,9 @@ export default function AgenticCoachScreen({ route, navigation }) {
     const loadCoachHistory = async () => {
         try {
             setIsLoadingHistory(true);
-            console.log('Loading coach conversation history...');
+            console.log('Loading coach conversation history for context:', { validTranscriptId, validContextType });
 
-            const history = await getCoachHistory();
+            const history = await getCoachHistory(validTranscriptId, validContextType);
 
             // Convert history to message format
             if (history && history.length > 0) {
