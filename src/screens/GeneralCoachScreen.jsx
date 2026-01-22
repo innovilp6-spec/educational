@@ -10,13 +10,16 @@ import {
     KeyboardAvoidingView,
     Platform,
     Alert,
+    Modal,
+    FlatList,
 } from 'react-native';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
 
 export default function GeneralCoachScreen({ navigation }) {
-    // For general coach: contextId is null and contextType is 'general'
-    const validTranscriptId = null;
-    const validContextType = 'general';
+    // Context state - track current study context
+    const [currentContextId, setCurrentContextId] = useState(null);
+    const [currentContextType, setCurrentContextType] = useState('general');
+    const [currentContextDisplay, setCurrentContextDisplay] = useState('General Questions');
 
     // State management
     const [messages, setMessages] = useState([]);
@@ -26,8 +29,16 @@ export default function GeneralCoachScreen({ navigation }) {
     const [isLoadingHistory, setIsLoadingHistory] = useState(true);
     const [currentInteractionId, setCurrentInteractionId] = useState(null);
 
+    // Context hint state
+    const [showContextModal, setShowContextModal] = useState(false);
+    const [contextHintMatches, setContextHintMatches] = useState([]);
+    const [hintConfirmationQuestion, setHintConfirmationQuestion] = useState('');
+    const [isSingleMatch, setIsSingleMatch] = useState(false);
+    const [pendingUserMessage, setPendingUserMessage] = useState('');
+    const [isCheckingHint, setIsCheckingHint] = useState(false);
+
     // API hook
-    const { askCoach, getCoachHistory, askCoachFollowup } = useTranscriptAPI();
+    const { askCoach, getCoachHistory, askCoachFollowup, detectContextHint, confirmContextSwitch } = useTranscriptAPI();
 
     // Scroll reference
     const scrollViewRef = useRef(null);
@@ -44,12 +55,18 @@ export default function GeneralCoachScreen({ navigation }) {
         }
     }, [messages]);
 
+    // Load history when context changes
+    useEffect(() => {
+        console.log('Context changed, loading history for:', { currentContextId, currentContextType });
+        loadCoachHistory();
+    }, [currentContextId, currentContextType]);
+
     const loadCoachHistory = async () => {
         try {
             setIsLoadingHistory(true);
-            console.log('Loading general coach conversation history');
+            console.log('Loading coach conversation history for context:', { currentContextId, currentContextType });
 
-            const history = await getCoachHistory(validTranscriptId, validContextType);
+            const history = await getCoachHistory(currentContextId, currentContextType);
 
             // Convert history to message format
             if (history && history.length > 0) {
@@ -100,8 +117,55 @@ export default function GeneralCoachScreen({ navigation }) {
         }
 
         const userMessage = userInput.trim();
-        setUserInput('');
+        console.log('[GeneralCoachScreen] Sending message:', userMessage);
 
+        try {
+            setIsCheckingHint(true);
+            console.log('[GeneralCoachScreen] Checking for context hints...');
+
+            // Check for context hints in the message
+            const hintResponse = await detectContextHint(userMessage);
+            console.log('[GeneralCoachScreen] Hint detection response:', hintResponse);
+
+            if (hintResponse?.hasContextHint && hintResponse?.matches && hintResponse.matches.length > 0) {
+                // Found a context hint!
+                console.log('[GeneralCoachScreen] Context hint FOUND:', hintResponse);
+
+                // Store the pending message and show confirmation modal
+                setPendingUserMessage(userMessage);
+                setContextHintMatches(hintResponse.matches);
+                setHintConfirmationQuestion(hintResponse.confirmationQuestion);
+                setIsSingleMatch(hintResponse.isSingleMatch || false);
+                setShowContextModal(true);
+                setUserInput('');
+                setIsCheckingHint(false);
+
+                return;
+            }
+
+            console.log('[GeneralCoachScreen] No hint detected, proceeding with normal message');
+            // No hint detected, proceed with normal message sending
+            setUserInput('');
+            setIsCheckingHint(false);
+
+            await processCoachMessage(userMessage);
+
+        } catch (error) {
+            console.error('[GeneralCoachScreen] Error checking for context hint:', error);
+            setIsCheckingHint(false);
+
+            // Proceed with normal message even if hint detection fails
+            const messageToSend = userInput.trim();
+            setUserInput('');
+
+            if (messageToSend) {
+                console.log('[GeneralCoachScreen] Hint detection failed, proceeding with normal message');
+                await processCoachMessage(messageToSend);
+            }
+        }
+    };
+
+    const processCoachMessage = async (userMessage) => {
         try {
             setIsLoading(true);
 
@@ -122,13 +186,13 @@ export default function GeneralCoachScreen({ navigation }) {
                 console.log('Asking coach follow-up question...');
                 response = await askCoachFollowup(currentInteractionId, userMessage);
             } else {
-                // Ask new question (general coach, no context)
-                console.log('Asking coach new general question...');
+                // Ask new question with current context
+                console.log('Asking coach new question with context:', { currentContextType, currentContextId });
                 response = await askCoach(
                     userMessage,
                     simplificationLevel,
-                    validContextType, // contextType: 'general'
-                    validTranscriptId // contextId: null
+                    currentContextType,
+                    currentContextId
                 );
             }
 
@@ -165,6 +229,73 @@ export default function GeneralCoachScreen({ navigation }) {
         }
     };
 
+    const handleContextSelection = async (selectedMatch) => {
+        try {
+            setShowContextModal(false);
+            setIsLoading(true);
+
+            console.log('Confirming context switch:', selectedMatch);
+
+            // Special handling for general context (no backend confirmation needed)
+            if (selectedMatch.type === 'general') {
+                console.log('Switching back to general context');
+
+                // Update context state variables
+                setCurrentContextId(null);
+                setCurrentContextType('general');
+                setCurrentContextDisplay('General Questions');
+
+                // Reset interaction ID
+                setCurrentInteractionId(null);
+
+                // Show toast notification (not added to chat history)
+                Alert.alert('Context Switched', 'Switched to General Questions');
+
+                // Process pending message if any
+                if (pendingUserMessage) {
+                    await processCoachMessage(pendingUserMessage);
+                }
+
+                setIsLoading(false);
+                setPendingUserMessage('');
+                return;
+            }
+
+            // Call backend to confirm context switch for book/lecture/note
+            const confirmResponse = await confirmContextSwitch(selectedMatch.id, selectedMatch.type);
+
+            if (confirmResponse?.success) {
+                console.log('Context switched successfully');
+
+                // Update context state variables
+                setCurrentContextId(selectedMatch.id);
+                setCurrentContextType(selectedMatch.type);
+                setCurrentContextDisplay(selectedMatch.displayName);
+
+                // Reset interaction ID to start fresh with new context
+                setCurrentInteractionId(null);
+                
+                // DON'T clear messages here - the useEffect will load the history for this context
+                // This preserves existing conversation history for this context
+
+                // Show toast notification (not added to chat history)
+                Alert.alert('Context Switched', `Switched to ${selectedMatch.displayName}`);
+
+                // Now process the original message with new context
+                if (pendingUserMessage) {
+                    await processCoachMessage(pendingUserMessage);
+                }
+            }
+        } catch (error) {
+            console.error('Error switching context:', error);
+            Alert.alert('Error', 'Failed to switch context. Please try again.');
+        } finally {
+            setIsLoading(false);
+            setPendingUserMessage('');
+            setContextHintMatches([]);
+        }
+    };
+
     const clearConversation = () => {
         Alert.alert(
             'Clear Conversation',
@@ -182,6 +313,57 @@ export default function GeneralCoachScreen({ navigation }) {
             ]
         );
     };
+
+    const renderContextMatchItem = ({ item, index }) => (
+        <TouchableOpacity
+            style={styles.matchItem}
+            onPress={() => handleContextSelection(item)}
+        >
+            <View style={styles.matchContent}>
+                <Text style={styles.matchNumber}>{item.optionNumber}.</Text>
+                <View style={styles.matchInfo}>
+                    <Text style={styles.matchTitle}>{item.title}</Text>
+                    <Text style={styles.matchType}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</Text>
+                </View>
+            </View>
+        </TouchableOpacity>
+    );
+
+    const renderContextModal = () => (
+        <Modal
+            visible={showContextModal}
+            transparent
+            animationType="fade"
+            onRequestClose={() => {
+                setShowContextModal(false);
+                setPendingUserMessage('');
+            }}
+        >
+            <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Select Context</Text>
+                    <Text style={styles.modalQuestion}>{hintConfirmationQuestion}</Text>
+
+                    <FlatList
+                        data={contextHintMatches}
+                        renderItem={renderContextMatchItem}
+                        keyExtractor={(item, idx) => `${item.id}-${idx}`}
+                        style={styles.matchesList}
+                    />
+
+                    <TouchableOpacity
+                        style={styles.cancelButton}
+                        onPress={() => {
+                            setShowContextModal(false);
+                            setPendingUserMessage('');
+                        }}
+                    >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+    );
 
     const renderMessage = (message) => {
         const isUserMessage = message.type === 'user';
@@ -236,7 +418,7 @@ export default function GeneralCoachScreen({ navigation }) {
             <View style={styles.header}>
                 <View>
                     <Text style={styles.headerTitle}>Agentic Coach</Text>
-                    <Text style={styles.headerSubtitle}>General Questions</Text>
+                    <Text style={styles.headerSubtitle}>{currentContextDisplay}</Text>
                 </View>
                 <TouchableOpacity
                     onPress={clearConversation}
@@ -304,19 +486,22 @@ export default function GeneralCoachScreen({ navigation }) {
                 />
                 <TouchableOpacity
                     onPress={sendMessage}
-                    disabled={isLoading || !userInput.trim()}
+                    disabled={isLoading || isCheckingHint || !userInput.trim()}
                     style={[
                         styles.sendButton,
-                        (isLoading || !userInput.trim()) && styles.sendButtonDisabled,
+                        (isLoading || isCheckingHint || !userInput.trim()) && styles.sendButtonDisabled,
                     ]}
                 >
-                    {isLoading ? (
+                    {isLoading || isCheckingHint ? (
                         <ActivityIndicator size="small" color="#fff" />
                     ) : (
                         <Text style={styles.sendButtonText}>Send</Text>
                     )}
                 </TouchableOpacity>
             </View>
+
+            {/* Context Selection Modal */}
+            {renderContextModal()}
         </KeyboardAvoidingView>
     );
 }
@@ -509,5 +694,80 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 14,
         fontWeight: '600',
+    },
+    // Modal and notification styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 20,
+        width: '85%',
+        maxHeight: '70%',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 12,
+    },
+    modalQuestion: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 16,
+        lineHeight: 20,
+    },
+    matchesList: {
+        maxHeight: 300,
+        marginBottom: 16,
+    },
+    matchItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        marginVertical: 6,
+        backgroundColor: '#f9f9f9',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    matchContent: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+    },
+    matchNumber: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#000',
+        marginRight: 12,
+        minWidth: 20,
+    },
+    matchInfo: {
+        flex: 1,
+    },
+    matchTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 4,
+    },
+    matchType: {
+        fontSize: 12,
+        color: '#999',
+    },
+    cancelButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    cancelButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#666',
     },
 });

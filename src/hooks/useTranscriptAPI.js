@@ -745,6 +745,44 @@ export default function useTranscriptAPI() {
         }
     };
 
+    // Detect context hint in user message
+    const detectContextHint = async (message) => {
+        try {
+            console.log("Detecting context hint in message:", message);
+
+            const response = await makeServerRequest(
+                `/api/coach/agentic/detect-hint`,
+                "POST",
+                { message }
+            );
+
+            console.log("Context hint detection response:", response);
+            return response;
+        } catch (err) {
+            console.error("Error detecting context hint:", err);
+            throw err;
+        }
+    };
+
+    // Confirm and switch context
+    const confirmContextSwitch = async (selectedContextId, selectedContextType) => {
+        try {
+            console.log("Confirming context switch:", { selectedContextId, selectedContextType });
+
+            const response = await makeServerRequest(
+                `/api/coach/agentic/confirm-context`,
+                "POST",
+                { selectedContextId, selectedContextType }
+            );
+
+            console.log("Context switch confirmed:", response);
+            return response;
+        } catch (err) {
+            console.error("Error confirming context switch:", err);
+            throw err;
+        }
+    };
+
     return {
         isAuthenticating,
         isSummarizing,
@@ -778,6 +816,8 @@ export default function useTranscriptAPI() {
         requestSugamyaDownload,
         getSugamyaDownloads,
         updateSugamyaFormatPreferences,
+        detectContextHint,
+        confirmContextSwitch,
     };
 }
 
