@@ -35,6 +35,10 @@ export default function HomeScreen({ navigation }) {
         onPress={() => navigation.navigate('RecordingsList')}
       />
       <PrimaryButton
+        title="Coach (Ask Questions)"
+        onPress={() => navigation.navigate('GeneralCoach')}
+      />
+      <PrimaryButton
         title="My Notes"
         onPress={() => navigation.navigate('Notes')}
       />

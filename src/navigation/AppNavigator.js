@@ -13,6 +13,7 @@ import NameSessionScreen from '../screens/NameSessionScreen';
 import TranscriptViewerScreen from '../screens/TranscriptViewerScreen';
 import RecordingsListScreen from '../screens/RecordingsListScreen';
 import AgenticCoachScreen from '../screens/AgenticCoachScreen';
+import GeneralCoachScreen from '../screens/GeneralCoachScreen';
 import AgenticNotesScreen from '../screens/AgenticNotesScreen';
 import CapturedBooksLibraryScreen from '../screens/CapturedBooksLibraryScreen';
 import BookCameraScreen from '../screens/BookCameraScreen';
@@ -41,6 +42,13 @@ export default function AppNavigator() {
                 component={AgenticCoachScreen}
                 options={{
                     title: 'Study with Coach',
+                }}
+            />
+            <Stack.Screen
+                name="GeneralCoach"
+                component={GeneralCoachScreen}
+                options={{
+                    title: 'Coach',
                 }}
             />
             <Stack.Screen
