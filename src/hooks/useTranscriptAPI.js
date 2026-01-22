@@ -157,31 +157,34 @@ export default function useTranscriptAPI() {
     // Ask coach a question (agentic)
     const askCoach = async (question, simplificationLevel = 3, contextType = "general", contextId = null) => {
         try {
-            console.log("Asking coach:", question);
+            console.log("Asking coach:", { question, contextType, contextId, simplificationLevel });
 
             const response = await makeServerRequest("/api/coach/agentic/ask", "POST", {
                 question,
                 simplificationLevel,
-                context: contextType,  // Server expects 'context', not 'contextType'
+                contextType,  // Server expects 'contextType'
                 contextId,
             });
 
             console.log("Coach RAW response received:", JSON.stringify(response, null, 2));
 
-            // Server returns data in response.coach object
-            if (response?.coach) {
+            // Server returns data in new standardized format: {success, data: {response, context, metadata}}
+            if (response?.success && response?.data?.response?.answer) {
                 const normalizedResponse = {
-                    _id: response.coach.interactionId,
-                    userQuestion: response.coach.question,
-                    coachResponse: response.coach.response,
-                    simplificationLevel: response.coach.simplificationLevel,
-                    createdAt: response.coach.respondedAt,
+                    _id: response.data?.metadata?.interactionId || new Date().getTime(),
+                    userQuestion: question,
+                    coachResponse: response.data.response.answer,
+                    formattedAnswer: response.data.response.formattedAnswer,
+                    simplificationLevel: response.data.metadata?.simplificationLevel || simplificationLevel,
+                    createdAt: response.data.metadata?.generatedAt || new Date().toISOString(),
+                    context: response.data.context,
                 };
                 console.log("Coach NORMALIZED response being returned:", JSON.stringify(normalizedResponse, null, 2));
                 return normalizedResponse;
             }
 
-            console.log("WARNING: response.coach not found in response");
+            console.log("WARNING: Unexpected response format - missing success or answer data");
+            console.log("Response structure:", JSON.stringify(Object.keys(response || {}), null, 2));
             return {};
         } catch (err) {
             console.error("Error asking coach:", err);
@@ -207,7 +210,7 @@ export default function useTranscriptAPI() {
     // Ask follow-up question to coach
     const askCoachFollowup = async (interactionId, followupQuestion) => {
         try {
-            console.log("Asking coach follow-up:", followupQuestion, "for interaction:", interactionId);
+            console.log("Asking coach follow-up:", { followupQuestion, interactionId });
 
             const response = await makeServerRequest(
                 `/api/coach/agentic/${interactionId}/followup`,
@@ -217,20 +220,22 @@ export default function useTranscriptAPI() {
 
             console.log("Coach follow-up RAW server response:", JSON.stringify(response, null, 2));
 
-            // Server returns data in response.coach object
-            if (response?.coach) {
+            // Server returns: {success, message, coach: {question, response, simplificationLevel, context, processingTimeMs, respondedAt, interactionId}}
+            if (response?.success && response?.coach?.response) {
                 const normalizedResponse = {
-                    _id: response.coach.interactionId,
-                    userQuestion: response.coach.question,
+                    _id: response.coach.interactionId || new Date().getTime(),
+                    userQuestion: followupQuestion,
                     coachResponse: response.coach.response,
-                    simplificationLevel: response.coach.simplificationLevel,
-                    createdAt: response.coach.respondedAt,
+                    simplificationLevel: response.coach.simplificationLevel || 3,
+                    createdAt: response.coach.respondedAt || new Date().toISOString(),
+                    context: response.coach.context,
                 };
                 console.log("Coach follow-up NORMALIZED response being returned:", JSON.stringify(normalizedResponse, null, 2));
                 return normalizedResponse;
             }
 
-            console.log("WARNING: response.coach not found in follow-up response");
+            console.log("WARNING: Unexpected follow-up response format");
+            console.log("Response structure:", JSON.stringify(Object.keys(response || {}), null, 2));
             return {};
         } catch (err) {
             console.error("Error asking coach follow-up:", err);
@@ -318,21 +323,40 @@ export default function useTranscriptAPI() {
     // ==========================================
 
     // Create a new agentic note with AI-powered note generation
+    // NEW APPROACH: Send raw prompt, backend extracts all metadata
     const agenticCreateNote = async (noteData) => {
         try {
             setIsProcessing(true);
             console.log("Creating agentic note:", noteData);
 
-            const payload = {
-                content: noteData.content,
-                standard: noteData.standard || '10',
-                chapter: noteData.chapter || 'Chapter 1',
-                topic: noteData.topic || 'General',
-                subject: noteData.subject || 'General',
-                sourceId: noteData.sourceId,
-                sourceType: noteData.sourceType || 'standalone',
-                initialInstruction: noteData.initialInstruction,
-            };
+            // Support both approaches:
+            // 1. NEW (recommended): Raw prompt - backend extracts everything
+            // 2. OLD: Structured data - for backward compatibility
+            
+            let payload;
+            
+            if (noteData.prompt) {
+                // NEW: Raw prompt - let backend extract metadata
+                console.log("Using NEW approach: Sending raw prompt");
+                payload = {
+                    prompt: noteData.prompt,
+                    sourceId: noteData.sourceId,
+                    sourceType: noteData.sourceType || 'standalone',
+                };
+            } else {
+                // OLD: Structured data (backward compatibility)
+                console.log("Using OLD approach: Structured data");
+                payload = {
+                    content: noteData.content,
+                    standard: noteData.standard || '10',
+                    chapter: noteData.chapter || 'Chapter 1',
+                    topic: noteData.topic || 'General',
+                    subject: noteData.subject || 'General',
+                    sourceId: noteData.sourceId,
+                    sourceType: noteData.sourceType || 'standalone',
+                    initialInstruction: noteData.initialInstruction,
+                };
+            }
 
             const response = await makeServerRequest("/api/notes/agentic/create", "POST", payload);
 
@@ -342,7 +366,7 @@ export default function useTranscriptAPI() {
             const normalized = {
                 noteId: response.note?.noteId || response.noteId,
                 title: response.note?.title || response.title,
-                content: response.note?.content || response.content,
+                content: response.note?.content || response.contentPreview || response.content,
                 contentPreview: response.note?.contentPreview || response.contentPreview,
                 conversationHistoryCount: response.note?.conversationHistoryCount || 0,
                 version: response.note?.version || 1,

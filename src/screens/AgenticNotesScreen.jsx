@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import PrimaryButton from '../components/PrimaryButton';
 
 export default function AgenticNotesScreen({ route, navigation }) {
     const { transcriptId, sessionName, transcript } = route.params || {};
@@ -429,6 +430,27 @@ ${(currentNote.conversationHistory || [])
                         </View>
                     </ScrollView>
 
+                    {currentNoteId && currentNote && (
+                        <View style={styles.buttonContainer}>
+                            <PrimaryButton 
+                                title="Study with Coach" 
+                                onPress={() => {
+                                    console.log('[COACH-BUTTON] Launching coach with:', {
+                                        transcriptId: currentNoteId,
+                                        sessionName: currentNote.title,
+                                        contextType: 'note',
+                                    });
+                                    navigation.navigate('AgenticCoach', {
+                                        transcriptId: currentNoteId,
+                                        sessionName: currentNote.title,
+                                        contextType: 'note',
+                                        transcript: currentNote.content,
+                                    });
+                                }}
+                            />
+                        </View>
+                    )}
+
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                         style={styles.inputContainer}
@@ -762,5 +784,11 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: '#ddd',
         marginVertical: 12,
+    },
+    buttonContainer: {
+        padding: 16,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
     },
 });

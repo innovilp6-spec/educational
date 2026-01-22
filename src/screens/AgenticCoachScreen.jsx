@@ -14,7 +14,11 @@ import {
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
 
 export default function AgenticCoachScreen({ route, navigation }) {
-    const { transcriptId, sessionName, transcript, contextType } = route.params;
+    const { transcriptId, sessionName, transcript, contextType } = route.params || {};
+    
+    // Ensure we have valid values
+    const validTranscriptId = transcriptId || null;
+    const validContextType = contextType || 'general';
 
     // State management
     const [messages, setMessages] = useState([]);
@@ -125,8 +129,8 @@ export default function AgenticCoachScreen({ route, navigation }) {
                 response = await askCoach(
                     userMessage,
                     simplificationLevel,
-                    contextType, // contextType (valid: lecture, note, book, general)
-                    transcriptId // contextId
+                    validContextType, // contextType (valid: lecture, note, book, general)
+                    validTranscriptId // contextId
                 );
             }
 
