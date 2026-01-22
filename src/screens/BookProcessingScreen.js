@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@react-native-vector-icons/fontawesome';
 
-const API_BASE = 'http://10.2.2.1:5000/api';
+const API_BASE = 'http://10.0.2.2:5000/api';
 
 const BookProcessingScreen = ({ route, navigation }) => {
     const { images, title, category, tags } = route.params;
@@ -36,43 +36,66 @@ const BookProcessingScreen = ({ route, navigation }) => {
             setProcessing(true);
             setErrorMessage('');
 
-            // Prepare form data for multipart request
-            const formData = new FormData();
+            console.log('[BookProcessing] Starting upload and processing...');
+            console.log('[BookProcessing] Total images:', images.length);
+            console.log('[BookProcessing] Metadata:', { title, category, tags });
 
-            // Add images
-            images.forEach((img, index) => {
-                // If img is {data: base64String, uri}, use the uri, else construct from data
-                let imageUri = img.uri || img.data;
-                formData.append('images', {
-                    uri: img.uri || `data:image/jpeg;base64,${img.data}`,
-                    type: 'image/jpeg',
-                    name: `page_${index + 1}.jpg`,
+            // Prepare JSON request body with base64 image data
+            console.log('[BookProcessing] Preparing request body...');
+            const imageDataArray = images.map((img, index) => {
+                // Use base64 data (not URI) - BookCameraScreen already converts to base64
+                const imageData = img.data || img.uri;
+                console.log(`[BookProcessing] Image ${index + 1}:`, {
+                    hasUri: !!img.uri,
+                    hasData: !!img.data,
+                    dataType: typeof imageData,
+                    dataLength: imageData?.length || 0,
+                    isBase64: imageData?.length > 1000, // Real images are much larger
                 });
-                // Simulate progress
+                return {
+                    data: imageData,
+                    fileName: `page_${index + 1}.jpg`,
+                };
+            });
+
+            // Simulate progress
+            images.forEach((img, index) => {
                 setTimeout(() => {
                     setProcessedPages(Math.min(index + 1, totalPages));
                 }, (index + 1) * 500);
             });
 
-            // Add metadata
-            formData.append('title', title || 'Captured Book');
-            formData.append('category', category || 'Uncategorized');
-            if (tags && tags.length > 0) {
-                formData.append('tags', JSON.stringify(tags));
-            }
+            // Build JSON request
+            const requestBody = {
+                images: imageDataArray,
+                title: title || 'Captured Book',
+                category: category || 'other',
+                language: 'English',
+                tags: tags && tags.length > 0 ? tags : [],
+            };
 
-            console.log('[BookProcessing] Uploading', images.length, 'images to:', `${API_BASE}/books/captured/scan`);
+            console.log('[BookProcessing] Request body prepared:', {
+                imageCount: requestBody.images.length,
+                title: requestBody.title,
+                category: requestBody.category,
+                tags: requestBody.tags.length,
+            });
 
-            const response = await fetch(`${API_BASE}/books/captured/scan`, {
+            const endpoint = `${API_BASE}/books/captured/scan`;
+            console.log('[BookProcessing] Uploading to:', endpoint);
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
-                body: formData,
+                body: JSON.stringify(requestBody),
                 headers: {
                     'x-user-email': 'testuser@example.com',
-                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
                 },
             });
 
+            console.log('[BookProcessing] Response received');
             console.log('[BookProcessing] Response status:', response.status);
+            console.log('[BookProcessing] Response ok:', response.ok);
 
             if (response.ok) {
                 const data = await response.json();
@@ -82,9 +105,19 @@ const BookProcessingScreen = ({ route, navigation }) => {
                     console.log('[BookProcessing] Book created with ID:', newBookId);
                     setProcessedPages(totalPages);
 
-                    // Wait 2 seconds then navigate to detail screen
+                    // Wait 2 seconds then navigate to detail screen with full book data
                     setTimeout(() => {
-                        navigation.replace('BookDetail', { bookId: newBookId });
+                        console.log('[BookProcessing] Navigating to BookDetail with ID:', newBookId);
+                        console.log('[BookProcessing] Passing book data:', {
+                            bookId: newBookId,
+                            title: data.data.title,
+                            totalPages: data.data.totalPages,
+                            textArray3DPages: data.data.textArray3D.length,
+                        });
+                        navigation.replace('BookDetail', { 
+                            bookId: newBookId,
+                            bookData: data.data // Pass all the data we got from upload response
+                        });
                     }, 2000);
                 } else {
                     console.error('[BookProcessing] API returned success:false');
@@ -92,13 +125,22 @@ const BookProcessingScreen = ({ route, navigation }) => {
                     setProcessing(false);
                 }
             } else {
-                const data = await response.json();
-                console.error('[BookProcessing] Error response:', response.status, data);
-                setErrorMessage(data.message || 'Error processing images. Please try again.');
+                const responseText = await response.text();
+                console.error('[BookProcessing] Error response status:', response.status);
+                console.error('[BookProcessing] Error response text:', responseText);
+
+                try {
+                    const data = JSON.parse(responseText);
+                    setErrorMessage(data.message || 'Error processing images. Please try again.');
+                } catch (e) {
+                    setErrorMessage(`Error processing images. Status: ${response.status}`);
+                }
                 setProcessing(false);
             }
         } catch (error) {
             console.error('[BookProcessing] Fetch error:', error);
+            console.error('[BookProcessing] Error message:', error.message);
+            console.error('[BookProcessing] Error stack:', error.stack);
             setErrorMessage('Network error. Please check your connection.');
             setProcessing(false);
         }
@@ -179,7 +221,7 @@ const BookProcessingScreen = ({ route, navigation }) => {
                                     📷 Title: {title || 'Captured Book'}
                                 </Text>
                                 <Text style={styles.detailText}>
-                                    📂 Category: {category || 'Uncategorized'}
+                                    📂 Category: {category || 'other'}
                                 </Text>
                                 <Text style={styles.detailText}>
                                     📄 Total Pages: {totalPages}

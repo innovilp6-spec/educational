@@ -26,7 +26,7 @@ const BookCameraScreen = ({ navigation }) => {
         useCallback(() => {
             console.log('[BookCamera] useFocusEffect - hasPermission:', hasPermission);
             setPermissionStatus(hasPermission);
-            
+
             if (hasPermission === false) {
                 console.log('[BookCamera] Permission denied, requesting...');
                 requestPermission();
@@ -142,7 +142,7 @@ const BookCameraScreen = ({ navigation }) => {
             navigation.replace('BookProcessing', {
                 images: base64Images,
                 title: 'Captured Book',
-                category: 'Uncategorized',
+                category: 'other',
                 tags: [],
             });
         } catch (error) {
@@ -258,13 +258,14 @@ const BookCameraScreen = ({ navigation }) => {
                                     size={24}
                                     color={
                                         capturedImages.length > 0
-                                            ? '#fff'
+                                            ? '#000'
                                             : 'rgba(255,255,255,0.5)'
                                     }
                                 />
                                 <Text
                                     style={[
                                         styles.buttonText,
+                                        capturedImages.length > 0 && { color: '#000' },
                                         capturedImages.length === 0 && styles.disabledButtonText,
                                     ]}
                                 >

@@ -27,11 +27,16 @@ const CapturedBooksLibraryScreen = ({ navigation }) => {
     const fetchBooks = async () => {
         try {
             setLoading(true);
-            console.log('[CapturedBooksLibrary] Fetching books from:', `${API_BASE}/books/captured`);
+            const email = 'testuser@example.com';
+            
+            console.log('\n[CapturedBooksLibrary] ===== FETCHING ALL BOOKS =====');
+            console.log('[CapturedBooksLibrary] User email:', email);
+            console.log('[CapturedBooksLibrary] API endpoint:', `${API_BASE}/books/captured`);
+            console.log('[CapturedBooksLibrary] Headers being sent:', { 'x-user-email': email });
 
             const response = await fetch(`${API_BASE}/books/captured`, {
                 headers: {
-                    'x-user-email': 'testuser@example.com',
+                    'x-user-email': email,
                     'Content-Type': 'application/json',
                 },
             });
@@ -41,12 +46,23 @@ const CapturedBooksLibraryScreen = ({ navigation }) => {
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('[CapturedBooksLibrary] Response data:', data);
+                console.log('[CapturedBooksLibrary] ✓ Response received');
+                console.log('[CapturedBooksLibrary] Success flag:', data.success);
+                
                 if (data.success) {
-                    console.log('[CapturedBooksLibrary] Books loaded:', data.data.books?.length || 0);
+                    const booksCount = data.data.books?.length || 0;
+                    console.log('[CapturedBooksLibrary] Books loaded:', booksCount);
+                    console.log('[CapturedBooksLibrary] Total books in DB:', data.data.pagination?.total);
+                    console.log('[CapturedBooksLibrary] ===== DATA LOADED =====\n');
+                    
                     setBooks(data.data.books || []);
+                } else {
+                    console.error('[CapturedBooksLibrary] ❌ API returned success:false');
+                    console.error('[CapturedBooksLibrary] Response message:', data.message);
                 }
             } else {
+                console.error('[CapturedBooksLibrary] ❌ Response not OK');
+                console.error('[CapturedBooksLibrary] Status:', response.status);
                 const errorData = await response.text();
                 console.error('[CapturedBooksLibrary] Error response:', errorData);
                 Alert.alert('Error', `Failed to load books: ${response.status}`);
@@ -94,7 +110,12 @@ const CapturedBooksLibraryScreen = ({ navigation }) => {
     };
 
     const handleBookPress = (book) => {
-        navigation.navigate('BookDetail', { bookId: book._id });
+        console.log('[CapturedBooksLibrary] Book pressed:', {
+            id: book.id,
+            title: book.title,
+            idType: typeof book.id,
+        });
+        navigation.navigate('BookDetail', { bookId: book.id });
     };
 
     const renderBookItem = ({ item }) => (
@@ -132,7 +153,7 @@ const CapturedBooksLibraryScreen = ({ navigation }) => {
             </View>
             <TouchableOpacity
                 style={styles.deleteButton}
-                onPress={() => handleDeleteBook(item._id)}
+                onPress={() => handleDeleteBook(item.id)}
             >
                 <FontAwesome name="trash" size={18} color="#FF6B6B" />
             </TouchableOpacity>

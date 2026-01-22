@@ -12,7 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@react-native-vector-icons/fontawesome';
 import useBookReader from '../hooks/useBookReader';
 
-const API_BASE = 'http://10.2.2.1:5000/api';
+const API_BASE = 'http://10.0.2.2:5000/api';
 
 const BookDetailScreen = ({ route, navigation }) => {
     const { bookId } = route.params;
@@ -50,60 +50,106 @@ const BookDetailScreen = ({ route, navigation }) => {
 
     useFocusEffect(
         useCallback(() => {
-            // Check if mock data was passed directly (debug mode)
-            if (route.params?.mockData) {
-                console.log('[BookDetail] Initializing with mock data');
-                const bookData = route.params.mockData;
+            // Check if book data was passed directly from processing screen
+            if (route.params?.bookData) {
+                console.log('[BookDetail] Initializing with book data from upload response');
+                const bookData = route.params.bookData;
+                console.log('[BookDetail] Book data received:', {
+                    title: bookData.title,
+                    pages: bookData.textArray3D?.length,
+                    textLength: bookData.fullText?.length,
+                });
                 setBook(bookData);
-                setTextArray3D(bookData.textArray3D);
-                console.log('[BookDetail] Mock data loaded, pages:', bookData.textArray3D.length);
+                // Safely set textArray3D, default to empty array if undefined
+                setTextArray3D(bookData.textArray3D || []);
                 setLoading(false);
-            } else {
-                // Fetch from API normally
-                fetchBookDetail();
+                return;
             }
+            
+            // Fallback: Fetch from API if no data was passed (backward compatibility)
+            console.log('[BookDetail] No book data in params, fetching from API...');
+            fetchBookDetail();
 
             return () => {
                 // Cleanup handled by hook
             };
-        }, [route.params?.mockData])
+        }, [route.params?.bookData])
     );
 
     const fetchBookDetail = async () => {
         try {
             setLoading(true);
-            console.log('[BookDetail] Fetching book:', bookId);
-            console.log('[BookDetail] API endpoint:', `${API_BASE}/books/captured/${bookId}`);
+            const email = 'testuser@example.com';
+            const url = `${API_BASE}/books/captured/${bookId}`;
+            
+            console.log('\n[BookDetail] ===== FETCHING BOOK DETAIL =====');
+            console.log('[BookDetail] Book ID:', bookId);
+            console.log('[BookDetail] User email:', email);
+            console.log('[BookDetail] API endpoint:', url);
+            console.log('[BookDetail] Headers being sent:', { 'x-user-email': email });
+            console.log('[BookDetail] Request method: GET');
 
-            const response = await fetch(`${API_BASE}/books/captured/${bookId}`, {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+            const response = await fetch(url, {
+                method: 'GET',
                 headers: {
-                    'x-user-email': 'testuser@example.com',
+                    'x-user-email': email,
                     'Content-Type': 'application/json',
                 },
+                signal: controller.signal,
             });
 
+            clearTimeout(timeoutId);
+            console.log('[BookDetail] ✓ Response received');
             console.log('[BookDetail] Response status:', response.status);
+            console.log('[BookDetail] Response statusText:', response.statusText);
+            console.log('[BookDetail] Response ok:', response.ok);
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('[BookDetail] Book data received:', data);
+                console.log('[BookDetail] ✓ JSON parsed successfully');
+                console.log('[BookDetail] Success flag:', data.success);
+                
                 if (data.success) {
                     const bookData = data.data;
+                    console.log('[BookDetail] ✓ Book data received');
+                    console.log('[BookDetail] Book title:', bookData.title);
+                    console.log('[BookDetail] Book pages:', bookData.textArray3D?.length || 0);
+                    console.log('[BookDetail] Average confidence:', bookData.averageConfidence);
+                    console.log('[BookDetail] ===== DATA LOADED SUCCESSFULLY =====\n');
+                    
                     setBook(bookData);
-                    setTextArray3D(bookData.textArray3D);
-                    console.log('[BookDetail] Data loaded, pages:', bookData.textArray3D.length);
+                    // Safely set textArray3D, default to empty array if undefined
+                    setTextArray3D(bookData.textArray3D || []);
                 } else {
-                    console.error('[BookDetail] API returned success:false');
-                    Alert.alert('Error', 'Failed to load book');
+                    console.error('[BookDetail] ❌ API returned success:false');
+                    console.error('[BookDetail] Response message:', data.message);
+                    console.error('[BookDetail] Full response:', data);
+                    Alert.alert('Error', data.message || 'Failed to load book');
                 }
             } else {
+                console.error('[BookDetail] ❌ Response not OK');
+                console.error('[BookDetail] Status:', response.status, response.statusText);
                 const errorData = await response.text();
-                console.error('[BookDetail] Error response:', response.status, errorData);
-                Alert.alert('Error', `Failed to load book: ${response.status}`);
+                console.error('[BookDetail] Error response body:', errorData);
+                console.error('[BookDetail] Error response length:', errorData?.length);
+                Alert.alert('Error', `Failed to load book: ${response.status} ${response.statusText}`);
             }
         } catch (error) {
-            console.error('[BookDetail] Fetch error:', error.message);
-            Alert.alert('Error', 'Network error loading book');
+            console.error('[BookDetail] ===== FETCH ERROR =====');
+            console.error('[BookDetail] Error type:', error.name);
+            console.error('[BookDetail] Error message:', error.message);
+            console.error('[BookDetail] Error stack:', error.stack);
+            
+            if (error.name === 'AbortError') {
+                console.error('[BookDetail] Request timeout - server took more than 10 seconds to respond');
+                Alert.alert('Error', 'Request timeout - server is not responding');
+            } else {
+                console.error('[BookDetail] Network error or connection failed');
+                Alert.alert('Error', `Network error: ${error.message}`);
+            }
         } finally {
             setLoading(false);
         }

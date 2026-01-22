@@ -213,7 +213,7 @@ export const mockUploadAndProcessImages = async (
                     data: {
                         bookId: newBookId,
                         title: title || 'Captured Book',
-                        category: category || 'Uncategorized',
+                        category: category || 'other',
                         totalPages: totalPages,
                         averageConfidence: Math.floor(Math.random() * 15 + 85), // 85-100%
                     },

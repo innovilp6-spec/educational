@@ -60,14 +60,29 @@ const useBookReader = (textArray3D = []) => {
      */
     const initTTS = useCallback(() => {
         try {
-            console.log(JSON.stringify(textArray3D[0][0][1], null, 2));
+            // Log the structure of textArray3D
+            console.log('[useBookReader] ===== INIT TTS =====');
+            console.log('[useBookReader] textArray3D length:', textArray3D?.length);
+            console.log('[useBookReader] textArray3D[0] type:', Array.isArray(textArray3D[0]) ? 'array' : typeof textArray3D[0]);
+            console.log('[useBookReader] textArray3D[0] length:', textArray3D[0]?.length);
+            if (textArray3D[0] && textArray3D[0][0]) {
+                console.log('[useBookReader] textArray3D[0][0] type:', Array.isArray(textArray3D[0][0]) ? 'array' : typeof textArray3D[0][0]);
+                console.log('[useBookReader] textArray3D[0][0] length:', textArray3D[0][0]?.length);
+                console.log('[useBookReader] textArray3D[0][0]:', JSON.stringify(textArray3D[0][0]));
+                if (textArray3D[0][0][0]) {
+                    console.log('[useBookReader] textArray3D[0][0][0] type:', Array.isArray(textArray3D[0][0][0]) ? 'array' : typeof textArray3D[0][0][0]);
+                    console.log('[useBookReader] textArray3D[0][0][0]:', JSON.stringify(textArray3D[0][0][0]));
+                }
+            }
+            console.log('[useBookReader] ===== END STRUCTURE LOG =====');
+            
             Tts.setDefaultLanguage('en-IN');
             Tts.setDefaultRate(0.5);
             Tts.setDefaultPitch(1.0);
         } catch (error) {
             console.log('[useBookReader] TTS init error:', error);
         }
-    }, []);
+    }, [textArray3D]);
 
     /**
      * Handle TTS finish event - move to next content based on reading mode
@@ -142,7 +157,21 @@ const useBookReader = (textArray3D = []) => {
             return false;
         }
 
-        const sentence = targetArray[page][para][sent];
+        const rawSentence = targetArray[page][para][sent];
+        
+        // Handle both array and string formats for backward compatibility
+        // If sentence is an array with one element, extract it
+        const sentence = Array.isArray(rawSentence) ? rawSentence[0] : rawSentence;
+        
+        console.log('[useBookReader] Accessing sentence:', {
+            page,
+            para,
+            sent,
+            targetArray_page_para_type: Array.isArray(targetArray[page]?.[para]) ? 'array' : typeof targetArray[page]?.[para],
+            rawSentence_type: Array.isArray(rawSentence) ? 'array' : typeof rawSentence,
+            sentence_type: typeof sentence,
+            sentence_value: JSON.stringify(sentence),
+        });
         
         // ALWAYS update UI position, regardless of speaking state
         setCurrentPage(page);
