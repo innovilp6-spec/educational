@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import RNFS from 'react-native-fs';
 
 const SERVER_BASE_URL = "http://10.0.2.2:5000"; // Update with your actual server IP
 const USER_EMAIL = "testuser@example.com"; // Using test user for now
@@ -47,26 +48,84 @@ export default function useTranscriptAPI() {
     const transcribeAudioChunk = async (audioFilePath) => {
         try {
             setIsTranscribing(true);
-            console.log("Transcribing audio chunk using server:", audioFilePath);
+            console.log('\n[transcribeAudioChunk] ===== START TRANSCRIPTION =====');
+            console.log("[transcribeAudioChunk] Audio file path:", audioFilePath);
 
-            // TODO: Implement actual audio file upload to server
-            // For now, return a placeholder transcription
-            // In production, you'll need to:
-            // 1. Read the audio file
-            // 2. Create FormData with the audio file
-            // 3. POST to /api/lectures/transcribe-audio
+            const fileName = audioFilePath.split('/').pop();
+            console.log("[transcribeAudioChunk] File name:", fileName);
 
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Read file as base64
+            console.log("[transcribeAudioChunk] Reading file from disk...");
+            const audioBase64 = await RNFS.readFile(audioFilePath, 'base64');
+            console.log("[transcribeAudioChunk] File loaded successfully");
+            console.log("[transcribeAudioChunk] File size (base64):", audioBase64.length, "characters");
 
-            // Return realistic transcription
-            return "This is the transcribed content from the audio chunk.";
+            // Send to server as JSON with base64 data
+            const serverUrl = `${SERVER_BASE_URL}/api/lectures/transcribe-audio`;
+            console.log("[transcribeAudioChunk] Server URL:", serverUrl);
+            console.log("[transcribeAudioChunk] User email:", USER_EMAIL);
+
+            console.log("[transcribeAudioChunk] Preparing JSON payload...");
+            const payload = {
+                audioData: audioBase64,
+                fileName: fileName,
+            };
+            console.log("[transcribeAudioChunk] Payload keys:", Object.keys(payload));
+            console.log("[transcribeAudioChunk] Payload size:", JSON.stringify(payload).length, "bytes");
+
+            console.log("[transcribeAudioChunk] Sending POST request...");
+            const response = await fetch(serverUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-email': USER_EMAIL,
+                },
+                body: JSON.stringify(payload),
+            });
+
+            console.log("[transcribeAudioChunk] Response received");
+            console.log("[transcribeAudioChunk] Response status:", response.status);
+            console.log("[transcribeAudioChunk] Response status text:", response.statusText);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("[transcribeAudioChunk] Error response body:", errorText);
+                throw new Error(`Transcription failed: ${response.status} - ${errorText}`);
+            }
+
+            const result = await response.json();
+            console.log("[transcribeAudioChunk] Response JSON received");
+            console.log("[transcribeAudioChunk] Response keys:", Object.keys(result));
+
+            const transcribedText = result.transcription?.text || result.text || '';
+            console.log("[transcribeAudioChunk] Transcribed text length:", transcribedText.length);
+            console.log("[transcribeAudioChunk] Text preview:", transcribedText.substring(0, 100) + '...');
+            console.log('[transcribeAudioChunk] ===== SUCCESS =====\n');
+
+            return transcribedText;
         } catch (err) {
-            console.error("Error transcribing audio:", err);
+            console.error("[transcribeAudioChunk] ===== ERROR =====");
+            console.error("[transcribeAudioChunk] Error message:", err.message);
+            console.error("[transcribeAudioChunk] Error stack:", err.stack);
+            console.error("[transcribeAudioChunk] ===== END ERROR =====\n");
             throw err;
         } finally {
             setIsTranscribing(false);
         }
+    };
+
+    // Helper to determine MIME type
+    const getMimeType = (filePath) => {
+        const ext = filePath.toLowerCase().split('.').pop();
+        const mimeTypes = {
+            'wav': 'audio/wav',
+            'mp3': 'audio/mpeg',
+            'm4a': 'audio/mp4',
+            'aac': 'audio/aac',
+            'ogg': 'audio/ogg',
+            'flac': 'audio/flac',
+        };
+        return mimeTypes[ext] || 'audio/wav';
     };
 
     // Create transcript on server from chunks
@@ -201,7 +260,7 @@ export default function useTranscriptAPI() {
             const params = new URLSearchParams();
             if (contextId) params.append('contextId', contextId);
             if (contextType) params.append('contextType', contextType);
-            
+
             const queryString = params.toString() ? `?${params.toString()}` : '';
             const response = await makeServerRequest(`/api/coach/agentic/history${queryString}`, "GET");
 
@@ -338,9 +397,9 @@ export default function useTranscriptAPI() {
             // Support both approaches:
             // 1. NEW (recommended): Raw prompt - backend extracts everything
             // 2. OLD: Structured data - for backward compatibility
-            
+
             let payload;
-            
+
             if (noteData.prompt) {
                 // NEW: Raw prompt - let backend extract metadata
                 console.log("Using NEW approach: Sending raw prompt");
@@ -820,4 +879,3 @@ export default function useTranscriptAPI() {
         confirmContextSwitch,
     };
 }
-

@@ -21,13 +21,18 @@ export default function HomeScreen({ navigation }) {
       </Text>
 
       {/* DEBUG: Temporary button to test BookDetailScreen */}
-      <PrimaryButton
+      {/* <PrimaryButton
         title="🧪 DEBUG: Open Book Detail"
         onPress={handleOpenBookDetail}
-      />
+      /> */}
+
+      {/* <PrimaryButton
+        title="🧪 DEBUG: Test Audio Transcription"
+        onPress={() => navigation.navigate('DebugTranscribe')}
+      /> */}
 
       <PrimaryButton
-        title="Capture a Lecture"
+        title="Record a Lecture"
         onPress={() => navigation.navigate('LectureCapture')}
       />
       <PrimaryButton
@@ -42,10 +47,10 @@ export default function HomeScreen({ navigation }) {
         title="My Notes"
         onPress={() => navigation.navigate('Notes')}
       />
-      <PrimaryButton
+      {/* <PrimaryButton
         title="My Study Library"
         onPress={() => navigation.navigate('StudyLibrary')}
-      />
+      /> */}
 
       <PrimaryButton
         title="Read a Book"

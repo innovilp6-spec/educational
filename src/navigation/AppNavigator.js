@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import HomeScreen from '../screens/HomeScreen';
 import LectureCaptureScreen from '../screens/LectureCaptureScreen';
+import DebugTranscribeScreen from '../screens/DebugTranscribeScreen';
 import StudyLibraryScreen from '../screens/StudyLibraryScreen';
 import BookReadingScreen from '../screens/BookReadingScreen';
 import SugamyaLibraryScreen from '../screens/SugamyaLibraryScreen';
@@ -27,6 +28,7 @@ export default function AppNavigator() {
         <Stack.Navigator>
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="LectureCapture" component={LectureCaptureScreen} />
+            <Stack.Screen name="DebugTranscribe" component={DebugTranscribeScreen} options={{ title: 'Debug: Transcription' }} />
             <Stack.Screen name="StudyLibrary" component={StudyLibraryScreen} />
             <Stack.Screen name="BookReading" component={BookReadingScreen} />
             <Stack.Screen name="Sugamya" component={SugamyaLibraryScreen} />

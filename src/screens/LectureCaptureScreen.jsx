@@ -1,56 +1,104 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Button, StyleSheet, Alert, ScrollView } from 'react-native';
-import useAudioRecorder from '../hooks/useAudioRecorder';
+import { View, Text, Button, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
-import { requestMicPermission } from '../utils/permissions';
 import PrimaryButton from '../components/PrimaryButton';
+import RNFS from 'react-native-fs';
+import { requestReadExternalStoragePermission } from '../utils/permissions';
 
-const CHUNK_INTERVAL = 5000; // 5 seconds of continuous recording per chunk
+const CHUNK_INTERVAL = 2000; // 2 seconds between chunk processing (simulation)
+// Use Downloads directory to access the audio chunks
+const FFMPEG_CHUNKS_DIR = RNFS.DownloadDirectoryPath;
 
 export default function LectureCaptureScreen({ navigation }) {
-  const {
-    isRecording,
-    audioPath,
-    startRecording,
-    stopRecording,
-    pauseRecording,
-    resumeRecording,
-  } = useAudioRecorder();
-
-  const { transcribeAudioChunk, isTranscribing } = useTranscriptAPI();
+  const { transcribeAudioChunk } = useTranscriptAPI();
 
   const [masterTranscript, setMasterTranscript] = useState('');
   const [currentChunkTranscript, setCurrentChunkTranscript] = useState('');
   const [isProcessingChunk, setIsProcessingChunk] = useState(false);
   const [chunkCount, setChunkCount] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioFiles, setAudioFiles] = useState([]);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+
   const intervalRef = useRef(null);
   const isProcessingRef = useRef(false);
-  const chunkStartTimeRef = useRef(Date.now());
-  const audioPathRef = useRef(null);
+  const currentChunkIndexRef = useRef(0);
+
+  // Load audio files from Downloads directory
+  const loadAudioFiles = async () => {
+    try {
+      setIsLoadingFiles(true);
+
+      // Request storage permission first
+      console.log('[LectureCaptureScreen] Requesting READ_EXTERNAL_STORAGE permission...');
+      const hasPermission = await requestReadExternalStoragePermission();
+      if (!hasPermission) {
+        Alert.alert('Permission Denied', 'Cannot access audio files without storage permission.');
+        setIsLoadingFiles(false);
+        return;
+      }
+
+      console.log('[LectureCaptureScreen] Loading audio files from:', FFMPEG_CHUNKS_DIR);
+
+      // First, list ALL contents of Downloads to see what's there
+      console.log('[LectureCaptureScreen] Listing Downloads directory contents:');
+      const downloadsFolderContents = await RNFS.readDir(FFMPEG_CHUNKS_DIR);
+      console.log('[LectureCaptureScreen] Downloads has', downloadsFolderContents.length, 'items');
+      downloadsFolderContents.forEach(file => {
+        console.log('[LectureCaptureScreen] Downloads item:', {
+          name: file.name,
+          isDirectory: file.isDirectory(),
+          path: file.path
+        });
+      });
+
+      // Filter audio files (wav, mp3, m4a, etc.) from Downloads
+      const audioFileList = downloadsFolderContents
+        .filter(file => {
+          if (file.isDirectory()) {
+            console.log('[LectureCaptureScreen] Skipping directory:', file.name);
+            return false;
+          }
+          const ext = file.name.toLowerCase().split('.').pop();
+          const isAudio = ['wav', 'mp3', 'm4a', 'aac', 'ogg'].includes(ext);
+          console.log('[LectureCaptureScreen] File:', file.name, '| Extension:', ext, '| IsAudio:', isAudio);
+          return isAudio;
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      console.log('[LectureCaptureScreen] Found', audioFileList.length, 'audio files');
+      if (audioFileList.length === 0) {
+        Alert.alert('No Audio Files', `No audio files found in Downloads folder.\nPlace your chunk_*.wav files in Downloads.`);
+        setIsLoadingFiles(false);
+        return;
+      }
+
+      setAudioFiles(audioFileList);
+      setIsLoadingFiles(false);
+      return audioFileList;
+    } catch (error) {
+      console.error('[LectureCaptureScreen] Error loading audio files:', error);
+      Alert.alert('Error', 'Failed to load audio files: ' + error.message);
+      setIsLoadingFiles(false);
+    }
+  };
 
   const handleStart = async () => {
-    const granted = await requestMicPermission();
-    if (!granted) {
-      Alert.alert('Permission required', 'Microphone access is needed.');
-      return;
-    }
-
-    setMasterTranscript('');
-    setCurrentChunkTranscript('');
-    setChunkCount(0);
-    isProcessingRef.current = false;
-
     try {
-      console.log('Starting continuous recording...');
-      const recordingPath = await startRecording();
-      console.log('Recording started, path:', recordingPath);
-      // Sync to ref immediately
-      audioPathRef.current = recordingPath;
+      // Load audio files first
+      const files = await loadAudioFiles();
+      if (!files || files.length === 0) return;
 
-      // Wait longer for the recording to fully stabilize
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('[LectureCaptureScreen] Starting simulation with', files.length, 'audio files');
 
-      console.log('Recording stabilized, starting chunk processing...');
+      setMasterTranscript('');
+      setCurrentChunkTranscript('');
+      setChunkCount(0);
+      setIsRecording(true);
+      isProcessingRef.current = false;
+      currentChunkIndexRef.current = 0;
+
+      // Start the chunk interval
       startChunkInterval();
     } catch (error) {
       Alert.alert('Error', 'Failed to start recording: ' + error.message);
@@ -61,7 +109,7 @@ export default function LectureCaptureScreen({ navigation }) {
     intervalRef.current = setInterval(async () => {
       // Skip if already processing
       if (isProcessingRef.current) {
-        console.log('Already processing chunk, skipping...');
+        console.log('[LectureCaptureScreen] Already processing chunk, skipping...');
         return;
       }
 
@@ -69,166 +117,173 @@ export default function LectureCaptureScreen({ navigation }) {
         isProcessingRef.current = true;
         setIsProcessingChunk(true);
 
-        console.log('Chunk interval fired, current audioPath from ref:', audioPathRef.current);
-        console.log('Processing chunk, pausing recording...');
+        // Get current audio file (cycle through if needed)
+        const currentIndex = currentChunkIndexRef.current % audioFiles.length;
+        const audioFile = audioFiles[currentIndex];
 
-        // Pause the continuous recording to finalize the current chunk
-        await pauseRecording();
+        console.log('[LectureCaptureScreen] Processing chunk:', {
+          fileIndex: currentIndex,
+          fileName: audioFile.name,
+          filePath: audioFile.path,
+        });
 
-        // Give it a moment to finalize
-        await new Promise(resolve => setTimeout(resolve, 300));
+        console.log('[LectureCaptureScreen] Sending to transcription API...');
 
-        // Use the ref to get the current audio path (avoids closure issues)
-        if (audioPathRef.current) {
-          console.log('Got audio path for chunk:', audioPathRef.current);
+        // Transcribe the audio chunk
+        const transcription = await transcribeAudioChunk(audioFile.path);
 
-          try {
-            // Transcribe the audio chunk
-            const transcription = await transcribeAudioChunk(audioPathRef.current);
+        // Update current chunk transcript for display
+        setCurrentChunkTranscript(transcription);
 
-            // Update current chunk transcript for display
-            setCurrentChunkTranscript(transcription);
+        // Append to master transcript
+        setMasterTranscript(prev =>
+          prev ? `${prev} ${transcription}` : transcription
+        );
 
-            // Append to master transcript
-            setMasterTranscript(prev =>
-              prev ? `${prev} ${transcription}` : transcription
-            );
+        setChunkCount(prev => prev + 1);
 
-            setChunkCount(prev => prev + 1);
-            console.log('Chunk processed successfully');
-          } catch (transcribeError) {
-            console.error('Transcription error:', transcribeError);
-          }
-        } else {
-          console.warn('No audio path available in ref at interval');
-        }
+        // Move to next file
+        currentChunkIndexRef.current += 1;
 
-        // Resume recording to continue capturing
-        console.log('Resuming recording for next chunk...');
-        await resumeRecording();
-
-        setIsProcessingChunk(false);
-        isProcessingRef.current = false;
+        console.log('[LectureCaptureScreen] Chunk processed successfully');
       } catch (error) {
-        console.error('Error processing chunk:', error);
+        console.error('[LectureCaptureScreen] Error processing chunk:', error);
+        setCurrentChunkTranscript(`Error: ${error.message}`);
+      } finally {
         setIsProcessingChunk(false);
         isProcessingRef.current = false;
-
-        // Try to resume recording even if there was an error
-        try {
-          await resumeRecording();
-          console.log('Resumed recording after error');
-        } catch (resumeError) {
-          console.error('Failed to resume recording:', resumeError);
-        }
       }
     }, CHUNK_INTERVAL);
   };
 
-const handleStop = async () => {
-  try {
-    // Clear the interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    // Prevent processing while stopping
-    isProcessingRef.current = true;
-    setIsProcessingChunk(true);
-
-    console.log('Stopping recording...');
-    // Stop the continuous recording
-    const finalAudioPath = await stopRecording();
-
-    if (finalAudioPath) {
-      try {
-        // Transcribe the final chunk
-        console.log('Transcribing final chunk...');
-        const lastTranscription = await transcribeAudioChunk(finalAudioPath);
-
-        // Append to master transcript
-        const finalTranscript = masterTranscript
-          ? `${masterTranscript} ${lastTranscription}`
-          : lastTranscription;
-
-        setMasterTranscript(finalTranscript);
-        setCurrentChunkTranscript(lastTranscription);
-        setChunkCount(prev => prev + 1);
-        console.log('Final chunk processed');
-
-        // Navigate to Transcribing screen with the master transcript
-        navigation.replace('Transcribing', { masterTranscript: finalTranscript });
-      } catch (transcribeError) {
-        console.error('Error transcribing final chunk:', transcribeError);
-        navigation.replace('Transcribing', { masterTranscript });
+  const handleStop = async () => {
+    try {
+      // Clear the interval
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
-    } else {
-      console.warn('No final audio path');
+
+      // Prevent processing while stopping
+      isProcessingRef.current = true;
+      setIsProcessingChunk(true);
+      setIsRecording(false);
+
+      console.log('[LectureCaptureScreen] Stopping recording simulation...');
+
+      if (!masterTranscript || masterTranscript.trim().length === 0) {
+        Alert.alert('Empty Recording', 'No transcripts were captured. Please try again.');
+        setIsProcessingChunk(false);
+        isProcessingRef.current = false;
+        return;
+      }
+
+      console.log('[LectureCaptureScreen] Recording stopped. Master transcript ready.');
+      console.log('[LectureCaptureScreen] Total chunks processed:', chunkCount);
+
+      // Navigate to Transcribing screen with the master transcript
       navigation.replace('Transcribing', { masterTranscript });
-    }
-  } catch (error) {
-    console.error('Error stopping recording:', error);
-    Alert.alert('Error', 'Failed to stop recording: ' + error.message);
-    setIsProcessingChunk(false);
-    isProcessingRef.current = false;
-  }
-};
-
-useEffect(() => {
-  // Sync audioPath from hook to ref whenever it changes
-  audioPathRef.current = audioPath;
-  console.log('audioPath updated in ref:', audioPath);
-}, [audioPath]);
-
-useEffect(() => {
-  return () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+    } catch (error) {
+      console.error('[LectureCaptureScreen] Error stopping recording:', error);
+      Alert.alert('Error', 'Failed to stop recording: ' + error.message);
+      setIsProcessingChunk(false);
+      isProcessingRef.current = false;
     }
   };
-}, []);
 
-return (
-  <View style={styles.container}>
-    {/* <Text style={styles.title}>Live Lecture Capture</Text>
+  useEffect(() => {
+    // Load audio files on component mount
+    loadAudioFiles();
 
-    <View style={styles.statusContainer}>
-      <Text style={styles.statusText}>
-        Status: {!isRecording ? 'Ready' : isProcessingChunk ? 'Processing chunk...' : 'Recording...'}
-      </Text>
-      <Text style={styles.chunkCountText}>Chunks processed: {chunkCount}</Text>
-    </View> */}
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
-    <View style={styles.buttonRow}>
-      {!isRecording && (
-        <PrimaryButton title="Start Recording" onPress={handleStart} />
+  return (
+    <View style={styles.container}>
+      <View style={styles.headerSection}>
+        <Text style={styles.title}>Lecture Recording Simulation</Text>
+        <Text style={styles.subtitle}>Processing audio chunks from ffmpeg_chunks</Text>
+      </View>
+
+      {isLoadingFiles && (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading audio files...</Text>
+        </View>
       )}
 
-      {isRecording && (
-        <PrimaryButton title="Stop Recording" onPress={handleStop} />
+      {!isLoadingFiles && audioFiles.length === 0 && !isRecording && (
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>⚠️ No audio files found</Text>
+          <Text style={styles.errorSubtext}>Please add audio files to ffmpeg_chunks directory</Text>
+        </View>
+      )}
+
+      {audioFiles.length > 0 && (
+        <>
+          <View style={styles.statusSection}>
+            <View style={styles.statusBox}>
+              <Text style={styles.statusLabel}>Files Loaded:</Text>
+              <Text style={styles.statusValue}>{audioFiles.length} audio files</Text>
+            </View>
+
+            <View style={styles.statusBox}>
+              <Text style={styles.statusLabel}>Status:</Text>
+              <Text style={[styles.statusValue, { color: isRecording ? '#ff9800' : '#4caf50' }]}>
+                {!isRecording ? 'Ready' : isProcessingChunk ? 'Processing...' : 'Recording...'}
+              </Text>
+            </View>
+
+            <View style={styles.statusBox}>
+              <Text style={styles.statusLabel}>Chunks:</Text>
+              <Text style={styles.statusValue}>{chunkCount} processed</Text>
+            </View>
+          </View>
+
+          <View style={styles.transcriptSection}>
+            <Text style={styles.sectionTitle}>Current Chunk Transcription:</Text>
+            <ScrollView style={styles.transcriptBox}>
+              {isProcessingChunk && (
+                <View style={styles.loadingIndicator}>
+                  <ActivityIndicator size="small" color="#007AFF" />
+                  <Text style={styles.processingText}>Transcribing...</Text>
+                </View>
+              )}
+              <Text style={styles.transcriptText}>
+                {currentChunkTranscript || 'Waiting for transcription...'}
+              </Text>
+            </ScrollView>
+          </View>
+
+          <View style={styles.buttonRow}>
+            {!isRecording && (
+              <PrimaryButton title="Start Simulation" onPress={handleStart} />
+            )}
+
+            {isRecording && (
+              <PrimaryButton
+                title="Stop & Proceed"
+                onPress={handleStop}
+                style={styles.stopButton}
+              />
+            )}
+          </View>
+
+          {isRecording && masterTranscript.length > 0 && (
+            <View style={styles.masterTranscriptPreview}>
+              <Text style={styles.previewLabel}>Master Transcript Preview (First 200 chars):</Text>
+              <Text style={styles.previewText}>{masterTranscript.substring(0, 200)}...</Text>
+              <Text style={styles.transcriptLength}>Total length: {masterTranscript.length} characters</Text>
+            </View>
+          )}
+        </>
       )}
     </View>
-
-    <View style={styles.transcriptSection}>
-      {/* <Text style={styles.sectionTitle}>Current Chunk:</Text> */}
-      <ScrollView style={styles.transcriptBox}>
-        <Text style={styles.transcriptText}>
-          {currentChunkTranscript || 'Waiting for the transcript...'}
-        </Text>
-      </ScrollView>
-    </View>
-
-    {/* <View style={styles.transcriptSection}>
-      <Text style={styles.sectionTitle}>Master Transcript:</Text>
-      <ScrollView style={styles.transcriptBox}>
-        <Text style={styles.transcriptText}>
-          {masterTranscript || 'No transcription yet...'}
-        </Text>
-      </ScrollView>
-    </View> */}
-  </View>
-);
+  );
 }
 
 const styles = StyleSheet.create({
@@ -237,29 +292,68 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#f5f5f5',
   },
+  headerSection: {
+    marginBottom: 16,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
   title: {
     fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  statusContainer: {
-    backgroundColor: '#e3f2fd',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  statusText: {
-    fontSize: 14,
-    color: '#1976d2',
+    fontWeight: '700',
+    color: '#333',
     marginBottom: 4,
   },
-  chunkCountText: {
+  subtitle: {
     fontSize: 12,
-    color: '#1976d2',
+    color: '#666',
   },
-  buttonRow: {
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#d32f2f',
+    marginBottom: 8,
+  },
+  errorSubtext: {
+    fontSize: 13,
+    color: '#999',
+  },
+  statusSection: {
+    flexDirection: 'row',
     marginBottom: 16,
+    gap: 8,
+  },
+  statusBox: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  statusLabel: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  statusValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#007AFF',
   },
   transcriptSection: {
     flex: 1,
@@ -280,9 +374,57 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   transcriptText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#333',
+    fontFamily: 'Courier New',
+  },
+  buttonRow: {
+    marginBottom: 12,
+    gap: 8,
+  },
+  stopButton: {
+    backgroundColor: '#d32f2f',
+  },
+  loadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  processingText: {
+    marginLeft: 8,
+    color: '#007AFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  masterTranscriptPreview: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4caf50',
+    marginBottom: 12,
+  },
+  previewLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  previewText: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#333',
+    color: '#555',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  transcriptLength: {
+    fontSize: 11,
+    color: '#666',
+    textAlign: 'right',
   },
 });
 
