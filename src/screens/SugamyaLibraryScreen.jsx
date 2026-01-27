@@ -17,18 +17,19 @@ import {
   Modal,
   SafeAreaView,
 } from 'react-native';
+import PrimaryButton from '../components/PrimaryButton';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
 
 const COLORS = {
-  primary: '#6366f1',
-  secondary: '#8b5cf6',
+  primary: '#0d0d14',
+  secondary: '#09080e',
   success: '#10b981',
   danger: '#ef4444',
   warning: '#f59e0b',
   background: '#f8fafc',
   surface: '#ffffff',
-  text: '#1e293b',
-  textSecondary: '#64748b',
+  text: '#040608',
+  textSecondary: '#0a0b0e',
   border: '#e2e8f0',
 };
 
@@ -166,7 +167,7 @@ export default function SugamyaLibraryScreen() {
   const renderSearchTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       {/* Agentic Search Status */}
-      <View style={styles.agenticStatus}>
+      {/* <View style={styles.agenticStatus}>
         <Text style={styles.agenticTitle}>🤖 Agentic Search</Text>
         <Text style={styles.agenticDescription}>Searching books based on your profile...</Text>
 
@@ -186,9 +187,11 @@ export default function SugamyaLibraryScreen() {
             </View>
           </View>
         )}
-      </View>
+      </View> */}
 
-      <TouchableOpacity
+      <PrimaryButton title={"🔄 Refresh Search"} onPress={handleAutoSearch} disabled={isLoadingSearch}></PrimaryButton>
+
+      {/* <TouchableOpacity
         style={[styles.refreshButton, isLoadingSearch && styles.refreshButtonDisabled]}
         onPress={handleAutoSearch}
         disabled={isLoadingSearch}
@@ -198,7 +201,7 @@ export default function SugamyaLibraryScreen() {
         ) : (
           <Text style={styles.refreshButtonText}>🔄 Refresh Search</Text>
         )}
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       {searchResults.length > 0 && (
         <View style={styles.resultsInfo}>
@@ -230,7 +233,9 @@ export default function SugamyaLibraryScreen() {
   // Popular Tab
   const renderPopularTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <TouchableOpacity
+
+      <PrimaryButton title={"⭐ Load Popular Books"} onPress={loadPopular} disabled={isProcessing}></PrimaryButton>
+      {/* <TouchableOpacity
         style={[styles.loadButton, isProcessing && styles.loadButtonDisabled]}
         onPress={loadPopular}
         disabled={isProcessing}
@@ -240,7 +245,7 @@ export default function SugamyaLibraryScreen() {
         ) : (
           <Text style={styles.loadButtonText}>⭐ Load Popular Books</Text>
         )}
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       <FlatList
         data={popularBooks}
