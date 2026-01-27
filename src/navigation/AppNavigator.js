@@ -1,5 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
 import LectureCaptureScreen from '../screens/LectureCaptureScreen';
 import DebugTranscribeScreen from '../screens/DebugTranscribeScreen';
@@ -25,7 +27,16 @@ const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
     return (
-        <Stack.Navigator>
+        <Stack.Navigator
+            screenOptions={{
+                headerShown: false,
+            }}
+        >
+            {/* Auth Screens */}
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+
+            {/* App Screens */}
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="LectureCapture" component={LectureCaptureScreen} />
             <Stack.Screen name="DebugTranscribe" component={DebugTranscribeScreen} options={{ title: 'Debug: Transcription' }} />

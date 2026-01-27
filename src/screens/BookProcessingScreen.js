@@ -8,11 +8,13 @@ import {
     Alert,
 } from 'react-native';
 import { FontAwesome } from '@react-native-vector-icons/fontawesome';
+import { useAuth } from '../context/AuthContext';
 
 const API_BASE = 'http://10.0.2.2:5000/api';
 
 const BookProcessingScreen = ({ route, navigation }) => {
     const { images, title, category, tags } = route.params;
+    const { getUserEmail } = useAuth();
 
     const [processing, setProcessing] = useState(true);
     const [processedPages, setProcessedPages] = useState(0);
@@ -88,7 +90,7 @@ const BookProcessingScreen = ({ route, navigation }) => {
                 method: 'POST',
                 body: JSON.stringify(requestBody),
                 headers: {
-                    'x-user-email': 'testuser@example.com',
+                    'x-user-email': getUserEmail(),
                     'Content-Type': 'application/json',
                 },
             });

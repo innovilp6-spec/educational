@@ -20,6 +20,7 @@ export default function NotesScreen({ navigation }) {
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [newNoteData, setNewNoteData] = useState({
         title: '',
+        name: '',
         content: '',
         standard: '10',
         chapter: '',
@@ -61,6 +62,7 @@ export default function NotesScreen({ navigation }) {
 
             const noteResponse = await createNote({
                 title: newNoteData.title,
+                name: newNoteData.name,
                 content: newNoteData.content,
                 standard: newNoteData.standard,
                 chapter: newNoteData.chapter,
@@ -73,6 +75,7 @@ export default function NotesScreen({ navigation }) {
             // Reset form
             setNewNoteData({
                 title: '',
+                name: '',
                 content: '',
                 standard: '10',
                 chapter: '',
@@ -136,7 +139,7 @@ export default function NotesScreen({ navigation }) {
                     >
                         <Text style={styles.backButtonText}>← Back</Text>
                     </TouchableOpacity>
-                    <Text style={styles.detailTitle}>{selectedNote.title}</Text>
+                    <Text style={styles.detailTitle}>{selectedNote.name || selectedNote.title}</Text>
                     <TouchableOpacity
                         style={styles.deleteButton}
                         onPress={() => handleDeleteNote(selectedNote._id)}
@@ -147,6 +150,8 @@ export default function NotesScreen({ navigation }) {
 
                 <ScrollView style={styles.detailContent}>
                     <View style={styles.metaDataContainer}>
+                        {selectedNote.name && <Text style={styles.metaLabel}>Name: <Text style={styles.metaValue}>{selectedNote.name}</Text></Text>}
+                        <Text style={styles.metaLabel}>Title: <Text style={styles.metaValue}>{selectedNote.title}</Text></Text>
                         <Text style={styles.metaLabel}>Standard: <Text style={styles.metaValue}>{selectedNote.standard}</Text></Text>
                         <Text style={styles.metaLabel}>Chapter: <Text style={styles.metaValue}>{selectedNote.chapter}</Text></Text>
                         <Text style={styles.metaLabel}>Topic: <Text style={styles.metaValue}>{selectedNote.topic}</Text></Text>
@@ -205,6 +210,15 @@ export default function NotesScreen({ navigation }) {
                         placeholder="Note title"
                         value={newNoteData.title}
                         onChangeText={(text) => setNewNoteData({ ...newNoteData, title: text })}
+                        editable={!isLoading}
+                    />
+
+                    <Text style={styles.label}>Note Name (optional label)</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="e.g., Quick Review, Study Guide, etc."
+                        value={newNoteData.name}
+                        onChangeText={(text) => setNewNoteData({ ...newNoteData, name: text })}
                         editable={!isLoading}
                     />
 

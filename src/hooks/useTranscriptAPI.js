@@ -1,14 +1,18 @@
 import { useState, useMemo } from "react";
 import RNFS from 'react-native-fs';
+import { useAuth } from '../context/AuthContext';
 
-const SERVER_BASE_URL = "http://10.0.2.2:5000"; // Update with your actual server IP
-const USER_EMAIL = "testuser@example.com"; // Using test user for now
+const SERVER_BASE_URL = "http://10.0.2.2:5000";
 
 export default function useTranscriptAPI() {
+    const { getUserEmail } = useAuth();
     const [isAuthenticating, setIsAuthenticating] = useState(false);
     const [isSummarizing, setIsSummarizing] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    // Get current user's email from AuthContext
+    const USER_EMAIL = getUserEmail();
 
     // Helper function to make API calls to the server
     const makeServerRequest = async (endpoint, method = "POST", body = null) => {
@@ -27,6 +31,7 @@ export default function useTranscriptAPI() {
 
             const url = `${SERVER_BASE_URL}${endpoint}`;
             console.log(`Making ${method} request to: ${url}`);
+            console.log(`[useTranscriptAPI] User email in header: ${USER_EMAIL}`);
 
             const res = await fetch(url, options);
 
@@ -223,12 +228,38 @@ export default function useTranscriptAPI() {
                 simplificationLevel,
                 contextType,  // Server expects 'contextType'
                 contextId,
+                // NOTE: Do NOT send messageType - backend will classify it based on content
             });
 
             console.log("Coach RAW response received:", JSON.stringify(response, null, 2));
 
-            // Server returns data in standardized format: {success, data: {response, context, metadata}}
+            // Check for context-switch response (message not saved)
+            if (response?.isContextSwitch) {
+                console.log("Coach returned: Context-switch detected - message NOT saved");
+                return {
+                    isContextSwitch: true,
+                    success: true
+                };
+            }
+
+            // Handle new response format: {success, interactionId, coachResponse, createdAt, ...}
+            if (response?.success && response?.interactionId && response?.coachResponse) {
+                console.log("Coach returned: Study message saved successfully");
+                return {
+                    _id: response.interactionId,
+                    interactionId: response.interactionId,
+                    userQuestion: question,
+                    coachResponse: response.coachResponse,
+                    simplificationLevel: response.simplificationLevel || simplificationLevel,
+                    createdAt: response.createdAt || new Date().toISOString(),
+                    responseType: response.responseType,
+                    processingTime: response.processingTime,
+                };
+            }
+
+            // Legacy format fallback: {success, data: {response, context, metadata}}
             if (response?.success && response?.data?.response?.answer) {
+                console.log("Coach returned: Legacy response format");
                 const normalizedResponse = {
                     _id: response.data?.metadata?.interactionId || new Date().getTime(),
                     userQuestion: question,
@@ -242,8 +273,8 @@ export default function useTranscriptAPI() {
                 return normalizedResponse;
             }
 
-            console.log("WARNING: Unexpected response format - missing success or answer data");
-            console.log("Response structure:", JSON.stringify(Object.keys(response || {}), null, 2));
+            console.log("WARNING: Unexpected response format - missing required fields");
+            console.log("Response structure:", JSON.stringify(response, null, 2));
             return {};
         } catch (err) {
             console.error("Error asking coach:", err);

@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@react-native-vector-icons/fontawesome';
 import useBookReader from '../hooks/useBookReader';
 import PrimaryButton from '../components/PrimaryButton';
+import { useAuth } from '../context/AuthContext';
 
 const API_BASE = 'http://10.0.2.2:5000/api';
 
@@ -20,6 +21,7 @@ const BookDetailScreen = ({ route, navigation }) => {
     const [book, setBook] = useState(null);
     const [loading, setLoading] = useState(true);
     const [textArray3D, setTextArray3D] = useState([]); // 3D array [page][paragraph][sentence]
+    const { getUserEmail } = useAuth();
 
     // Use the custom hook for book reading functionality
     const {
@@ -80,7 +82,7 @@ const BookDetailScreen = ({ route, navigation }) => {
     const fetchBookDetail = async () => {
         try {
             setLoading(true);
-            const email = 'testuser@example.com';
+            const email = getUserEmail();
             const url = `${API_BASE}/books/captured/${bookId}`;
             
             console.log('\n[BookDetail] ===== FETCHING BOOK DETAIL =====');

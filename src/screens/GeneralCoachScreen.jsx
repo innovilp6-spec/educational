@@ -116,8 +116,15 @@ export default function GeneralCoachScreen({ navigation }) {
             return;
         }
 
+        // Prevent duplicate sends or sends during hint checking
+        if (isCheckingHint || isLoading) {
+            console.log('[GeneralCoachScreen] Ignoring send - already processing hint or message');
+            return;
+        }
+
         const userMessage = userInput.trim();
         console.log('[GeneralCoachScreen] Sending message:', userMessage);
+        console.log('[GeneralCoachScreen] Current state - isCheckingHint:', isCheckingHint, 'isLoading:', isLoading);
 
         try {
             setIsCheckingHint(true);
@@ -125,22 +132,27 @@ export default function GeneralCoachScreen({ navigation }) {
 
             // Check for context hints in the message
             const hintResponse = await detectContextHint(userMessage);
+
             console.log('[GeneralCoachScreen] Hint detection response:', hintResponse);
 
             if (hintResponse?.hasContextHint && hintResponse?.matches && hintResponse.matches.length > 0) {
-                // Found a context hint!
+                // ✓ IMPORTANT: Context hint FOUND - NEVER send to askCoach()
                 console.log('[GeneralCoachScreen] Context hint FOUND:', hintResponse);
+                console.log('[GeneralCoachScreen] ✓ Blocking message - will NOT be sent to backend');
+                console.log('[GeneralCoachScreen] ✓ Message will NOT be saved to database');
 
+                // Clear input immediately
+                setUserInput('');
+                
                 // Store the pending message and show confirmation modal
-                setPendingUserMessage(userMessage);
+                // f(userMessage);
                 setContextHintMatches(hintResponse.matches);
                 setHintConfirmationQuestion(hintResponse.confirmationQuestion);
                 setIsSingleMatch(hintResponse.isSingleMatch || false);
                 setShowContextModal(true);
-                setUserInput('');
+                
                 setIsCheckingHint(false);
-
-                return;
+                return; // ✓ CRITICAL: Return here - message is blocked, NOT sent to backend
             }
 
             console.log('[GeneralCoachScreen] No hint detected, proceeding with normal message');
@@ -154,14 +166,9 @@ export default function GeneralCoachScreen({ navigation }) {
             console.error('[GeneralCoachScreen] Error checking for context hint:', error);
             setIsCheckingHint(false);
 
-            // Proceed with normal message even if hint detection fails
-            const messageToSend = userInput.trim();
+            // Don't proceed if hint detection failed - be safe
+            console.log('[GeneralCoachScreen] Hint detection error - NOT sending message to be safe');
             setUserInput('');
-
-            if (messageToSend) {
-                console.log('[GeneralCoachScreen] Hint detection failed, proceeding with normal message');
-                await processCoachMessage(messageToSend);
-            }
         }
     };
 
@@ -169,46 +176,53 @@ export default function GeneralCoachScreen({ navigation }) {
         try {
             setIsLoading(true);
 
-            // Add user message to display immediately
-            const userMessageId = `user-${Date.now()}`;
-            setMessages(prev => [...prev, {
-                id: userMessageId,
-                type: 'user',
-                text: userMessage,
-                timestamp: new Date(),
-            }]);
+            // ✓ VERIFY: We should only get here if hint detection returned NO hint
+            console.log('[GeneralCoachScreen] processCoachMessage CALLED - hint was NOT detected');
+            console.log('[GeneralCoachScreen] Safe to send to backend:', userMessage);
 
-            let response;
+            // Ask coach - backend will classify the message
+            console.log('Asking coach new question with context:', { currentContextType, currentContextId });
+            const response = await askCoach(
+                userMessage,
+                simplificationLevel,
+                currentContextType,
+                currentContextId
+            );
 
-            // Decide whether to ask a new question or follow-up
-            if (currentInteractionId) {
-                // Ask follow-up to existing conversation
-                console.log('Asking coach follow-up question...');
-                response = await askCoachFollowup(currentInteractionId, userMessage);
-            } else {
-                // Ask new question with current context
-                console.log('Asking coach new question with context:', { currentContextType, currentContextId });
-                response = await askCoach(
-                    userMessage,
-                    simplificationLevel,
-                    currentContextType,
-                    currentContextId
-                );
-            }
-
-            // Add coach response
             console.log('Coach response object:', JSON.stringify(response, null, 2));
 
-            if (response && response.coachResponse && response._id) {
+            // Check if this is a context-switch message
+            if (response && response.isContextSwitch) {
+                // Context-switch message detected - backend did NOT save it
+                // Frontend will show context hint modal (from detectContextHint call earlier)
+                console.log('[GeneralCoachScreen] Context-switch detected - message NOT saved to database');
+                console.log('[GeneralCoachScreen] Frontend will show context switching modal');
+                return; // Don't add to chat, don't save interaction ID
+            }
+
+            // Only add user message if we have a saved response (backend saved it)
+            // This means it's a regular study message
+            // Support both response formats: interactionId (new) and _id (old)
+            const interactionId = response?.interactionId || response?._id;
+            
+            if (response && interactionId && response.coachResponse) {
+                // Add user message to display
                 setMessages(prev => [...prev, {
-                    id: response._id,
+                    id: `user-${Date.now()}`,
+                    type: 'user',
+                    text: userMessage,
+                    timestamp: new Date(),
+                }]);
+
+                // Add coach response
+                setMessages(prev => [...prev, {
+                    id: interactionId,
                     type: 'coach',
                     text: response.coachResponse,
                     timestamp: response.createdAt || new Date(),
                 }]);
 
-                // Update current interaction ID for follow-ups
-                setCurrentInteractionId(response._id);
+                setCurrentInteractionId(interactionId);
             } else {
                 console.log('Response validation failed. Response:', response);
                 throw new Error('Invalid response from coach API');
@@ -274,7 +288,7 @@ export default function GeneralCoachScreen({ navigation }) {
 
                 // Reset interaction ID to start fresh with new context
                 setCurrentInteractionId(null);
-                
+
                 // DON'T clear messages here - the useEffect will load the history for this context
                 // This preserves existing conversation history for this context
 

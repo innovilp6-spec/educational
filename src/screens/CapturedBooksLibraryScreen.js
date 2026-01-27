@@ -11,12 +11,14 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@react-native-vector-icons/fontawesome';
+import { useAuth } from '../context/AuthContext';
 
 const API_BASE = 'http://10.0.2.2:5000/api';
 
 const CapturedBooksLibraryScreen = ({ navigation }) => {
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { getUserEmail } = useAuth();
 
     useFocusEffect(
         useCallback(() => {
@@ -27,7 +29,7 @@ const CapturedBooksLibraryScreen = ({ navigation }) => {
     const fetchBooks = async () => {
         try {
             setLoading(true);
-            const email = 'testuser@example.com';
+            const email = getUserEmail();
             
             console.log('\n[CapturedBooksLibrary] ===== FETCHING ALL BOOKS =====');
             console.log('[CapturedBooksLibrary] User email:', email);
@@ -87,7 +89,7 @@ const CapturedBooksLibraryScreen = ({ navigation }) => {
                         const response = await fetch(`${API_BASE}/books/captured/${bookId}`, {
                             method: 'DELETE',
                             headers: {
-                                'x-user-email': 'testuser@example.com',
+                                'x-user-email': email,
                                 'Content-Type': 'application/json',
                             },
                         });

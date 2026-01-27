@@ -137,16 +137,26 @@ export default function AgenticCoachScreen({ route, navigation }) {
             // Add coach response
             console.log('Coach response object:', JSON.stringify(response, null, 2));
 
-            if (response && response.coachResponse && response._id) {
-                setMessages(prev => [...prev, {
-                    id: response._id,
-                    type: 'coach',
-                    text: response.coachResponse,
-                    timestamp: response.createdAt || new Date(),
-                }]);
+            // Only add response if backend saved it (not a context-switch)
+            if (response && response.interactionId) {
+                if (response.coachResponse) {
+                    setMessages(prev => [...prev, {
+                        id: response.interactionId,
+                        type: 'coach',
+                        text: response.coachResponse,
+                        timestamp: response.createdAt || new Date(),
+                    }]);
 
-                // Update current interaction ID for follow-ups
-                setCurrentInteractionId(response._id);
+                    // Update current interaction ID for follow-ups
+                    setCurrentInteractionId(response.interactionId);
+                } else {
+                    console.log('No coach response - unexpected in context-aware coach');
+                }
+            } else if (response && response.isContextSwitch) {
+                // Context-switch detected in context coach - treat as error
+                // Context switching only supported in general coach
+                console.log('Context-switch detected in context coach - not supported here');
+                throw new Error('Context switching is only available in General Coach');
             } else {
                 console.log('Response validation failed. Response:', response);
                 throw new Error('Invalid response from coach API');
