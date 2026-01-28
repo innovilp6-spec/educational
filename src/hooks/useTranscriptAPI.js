@@ -769,22 +769,44 @@ export default function useTranscriptAPI() {
         }
     };
 
-    // Request book download
-    const requestSugamyaDownload = async (bookId, format = null) => {
+    // Request book download with format selection
+    const requestSugamyaDownload = async (bookId, format = 'DAISY Text Only') => {
         try {
             setIsProcessing(true);
-            console.log("Requesting Sugamya book download:", bookId, format);
+            console.log('[useTranscriptAPI] Requesting Sugamya book download:', { bookId, format });
+
+            if (!bookId) {
+                throw new Error('Book ID is required');
+            }
+
+            if (!format) {
+                throw new Error('Format selection is required');
+            }
 
             const response = await makeServerRequest(
                 `/api/sugamya/download`,
-                "POST",
+                'POST',
                 { bookId, format }
             );
 
-            console.log("Download request created:", response);
-            return response.download;
+            console.log('[useTranscriptAPI] Download request response:', response);
+
+            if (response.success) {
+                return {
+                    success: true,
+                    message: response.message,
+                    download: response.download,
+                    downloadId: response.download?._id,
+                    status: response.download?.status || 'processing',
+                    sugamyaBookId: response.download?.sugamyaBookId,
+                    format: response.download?.format,
+                    formatId: response.download?.formatId,
+                };
+            } else {
+                throw new Error(response.message || 'Failed to request download');
+            }
         } catch (err) {
-            console.error("Error requesting download:", err);
+            console.error('[useTranscriptAPI] Error requesting download:', err.message);
             throw err;
         } finally {
             setIsProcessing(false);
@@ -795,18 +817,112 @@ export default function useTranscriptAPI() {
     const getSugamyaDownloads = async (downloadId = null) => {
         try {
             setIsProcessing(true);
-            console.log("Fetching Sugamya downloads");
+            console.log('[useTranscriptAPI] Fetching Sugamya downloads', { downloadId });
 
             const query = downloadId ? `?downloadId=${downloadId}` : '';
             const response = await makeServerRequest(
                 `/api/sugamya/downloads${query}`,
-                "GET"
+                'GET'
             );
 
-            console.log("Sugamya downloads:", response);
-            return response.downloads || [];
+            console.log('[useTranscriptAPI] Sugamya downloads response:', response);
+
+            // Ensure downloads is an array
+            const downloads = response.downloads || [];
+
+            return downloads.map(d => ({
+                _id: d._id || d.downloadId,
+                downloadId: d._id || d.downloadId,
+                sugamyaBookId: d.sugamyaBookId,
+                bookTitle: d.bookTitle,
+                bookAuthor: d.bookAuthor,
+                format: d.format || d.requestedFormat,
+                formatId: d.formatId,
+                status: d.status,
+                progress: d.progress || 0,
+                requestedAt: d.createdAt,
+                completedAt: d.completedAt,
+            }));
         } catch (err) {
-            console.error("Error fetching downloads:", err);
+            console.error('[useTranscriptAPI] Error fetching downloads:', err);
+            throw err;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Get user's download requests from NALP
+    const getSugamyaDownloadRequests = async (page = 1, limit = 10) => {
+        try {
+            setIsProcessing(true);
+            console.log('[useTranscriptAPI] Fetching Sugamya download requests', { page, limit });
+
+            const response = await makeServerRequest(
+                `/api/sugamya/download-requests?page=${page}&limit=${limit}`,
+                'GET'
+            );
+
+            console.log('[useTranscriptAPI] Download requests response:', response);
+
+            // Normalize response based on backend structure
+            const requests = response.books || response.requests || response.data || [];
+
+            return {
+                requests: requests.map(item => ({
+                    requestId: item.requestId || item.bookId,
+                    bookId: item.bookId,
+                    bookTitle: item.bookTitle || item.title,
+                    bookAuthor: item.bookAuthor || item.author,
+                    format: item.format,
+                    status: item.status || 'pending',
+                    expiryDate: item.expiryDate,
+                    downloadLink: item.downloadLink,
+                    requestDate: item.requestDate,
+                })),
+                totalCount: response.totalCount || response.meta?.totalResults || requests.length,
+                page: response.page || page,
+                limit: response.limit || limit,
+            };
+        } catch (err) {
+            console.error('[useTranscriptAPI] Error fetching download requests:', err);
+            throw err;
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Get user's view history from Sugamya
+    const getSugamyaUserHistory = async (page = 1, limit = 10) => {
+        try {
+            setIsProcessing(true);
+            console.log('[useTranscriptAPI] Fetching Sugamya user history', { page, limit });
+
+            const response = await makeServerRequest(
+                `/api/sugamya/history?page=${page}&limit=${limit}`,
+                'GET'
+            );
+
+            console.log('[useTranscriptAPI] User history response:', response);
+
+            // Normalize response based on backend structure
+            const history = response.books || response.history || response.data || [];
+
+            return {
+                history: history.map(item => ({
+                    bookId: item.bookId,
+                    bookTitle: item.bookTitle || item.title,
+                    bookAuthor: item.bookAuthor || item.author,
+                    format: item.format,
+                    status: item.status || 'viewed',
+                    viewedDate: item.viewedDate,
+                    downloadLink: item.downloadLink,
+                })),
+                totalCount: response.totalCount || response.meta?.totalResults || history.length,
+                page: response.page || page,
+                limit: response.limit || limit,
+            };
+        } catch (err) {
+            console.error('[useTranscriptAPI] Error fetching user history:', err);
             throw err;
         } finally {
             setIsProcessing(false);
@@ -905,6 +1021,8 @@ export default function useTranscriptAPI() {
         getSugamyaBookDetails,
         requestSugamyaDownload,
         getSugamyaDownloads,
+        getSugamyaDownloadRequests,
+        getSugamyaUserHistory,
         updateSugamyaFormatPreferences,
         detectContextHint,
         confirmContextSwitch,

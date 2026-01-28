@@ -39,17 +39,23 @@ export default function SugamyaLibraryScreen() {
     searchSugamyaBooks,
     getSugamyaPopularBooks,
     getSugamyaDownloads,
+    getSugamyaDownloadRequests,
+    getSugamyaUserHistory,
+    requestSugamyaDownload,
   } = useTranscriptAPI();
 
   // State management
-  const [activeTab, setActiveTab] = useState('search'); // 'search', 'popular', 'downloads'
+  const [activeTab, setActiveTab] = useState('search'); // 'search', 'popular', 'downloads', 'downloadRequests', 'history'
   const [searchResults, setSearchResults] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
   const [popularBooks, setPopularBooks] = useState([]);
   const [downloads, setDownloads] = useState([]);
+  const [downloadRequests, setDownloadRequests] = useState([]);
+  const [userHistory, setUserHistory] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
   const [bookDetailsModalVisible, setBookDetailsModalVisible] = useState(false);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
+  const [isRequestingDownload, setIsRequestingDownload] = useState(false);
 
   // Load user profile and search on mount
   useEffect(() => {
@@ -60,6 +66,10 @@ export default function SugamyaLibraryScreen() {
   useEffect(() => {
     if (activeTab === 'downloads') {
       loadDownloads();
+    } else if (activeTab === 'downloadRequests') {
+      loadDownloadRequests();
+    } else if (activeTab === 'history') {
+      loadUserHistory();
     }
   }, [activeTab]);
 
@@ -69,6 +79,24 @@ export default function SugamyaLibraryScreen() {
       setDownloads(userDownloads);
     } catch (error) {
       console.error('Failed to load downloads:', error);
+    }
+  };
+
+  const loadDownloadRequests = async () => {
+    try {
+      const requests = await getSugamyaDownloadRequests(1, 10);
+      setDownloadRequests(requests.requests || []);
+    } catch (error) {
+      console.error('Failed to load download requests:', error);
+    }
+  };
+
+  const loadUserHistory = async () => {
+    try {
+      const historyData = await getSugamyaUserHistory(1, 10);
+      setUserHistory(historyData.history || []);
+    } catch (error) {
+      console.error('Failed to load user history:', error);
     }
   };
 
@@ -103,6 +131,47 @@ export default function SugamyaLibraryScreen() {
       alert('Format preferences updated');
     } catch (error) {
       alert('Failed to update preferences: ' + error.message);
+    }
+  };
+
+  // Handle book download request using book's format
+  const handleRequestDownload = async () => {
+    try {
+      if (!selectedBook) {
+        alert('No book selected');
+        return;
+      }
+
+      // Get book ID from multiple possible property names
+      const bookId = selectedBook.sugamyaId || selectedBook.id || selectedBook.bookId;
+      
+      if (!bookId) {
+        alert('Book ID not found. Unable to request download.');
+        return;
+      }
+
+      setIsRequestingDownload(true);
+      console.log('[SugamyaLibraryScreen] Requesting download:', {
+        bookId,
+        format: selectedBook.format,
+      });
+
+      const result = await requestSugamyaDownload(bookId, selectedBook.format);
+
+      console.log('[SugamyaLibraryScreen] Download request successful:', result);
+
+      alert(
+        `✅ Download request submitted!\n\nBook: ${selectedBook.title}\nFormat: ${selectedBook.format}\nStatus: Processing\n\nCheck your Downloads tab for updates.`
+      );
+
+      // Close modal and refresh downloads list
+      setBookDetailsModalVisible(false);
+      await loadDownloads();
+    } catch (error) {
+      console.error('[SugamyaLibraryScreen] Download request failed:', error);
+      alert(`❌ Failed to request download: ${error.message}`);
+    } finally {
+      setIsRequestingDownload(false);
     }
   };
 
@@ -212,7 +281,7 @@ export default function SugamyaLibraryScreen() {
       <FlatList
         data={searchResults}
         renderItem={renderBookCard}
-        keyExtractor={(item, idx) => `${item.sugamyaId}-${idx}`}
+        keyExtractor={(item, idx) => `search-book-${item.sugamyaId || item.bookId || item.id || idx}`}
         scrollEnabled={false}
         ListEmptyComponent={
           searchResults.length === 0 && !isLoadingSearch ? (
@@ -250,7 +319,7 @@ export default function SugamyaLibraryScreen() {
       <FlatList
         data={popularBooks}
         renderItem={renderBookCard}
-        keyExtractor={(item, idx) => `popular-${item.sugamyaId}-${idx}`}
+        keyExtractor={(item, idx) => `popular-book-${item.sugamyaId || item.bookId || item.id || idx}`}
         scrollEnabled={false}
         ListEmptyComponent={
           <Text style={styles.emptyText}>No popular books available</Text>
@@ -285,6 +354,112 @@ export default function SugamyaLibraryScreen() {
       )}
     </ScrollView>
   );
+
+  // Render download requests tab
+  const renderDownloadRequestsTab = () => {
+    const renderRequestItem = (item) => (
+      <View style={styles.requestItem}>
+        <View style={styles.requestHeader}>
+          <Text style={styles.requestTitle}>{item.bookTitle}</Text>
+          <Text style={[
+            styles.requestStatus,
+            { color: item.status === 'completed' ? COLORS.success : COLORS.warning }
+          ]}>
+            {item.status === 'completed' ? '✓' : '⏳'} {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+          </Text>
+        </View>
+        <Text style={styles.requestFormat}>Format: {item.format}</Text>
+        {item.expiryDate && (
+          <Text style={styles.requestExpiry}>Expires: {item.expiryDate}</Text>
+        )}
+        {item.status === 'completed' && item.downloadLink && (
+          <TouchableOpacity
+            style={styles.downloadLinkButton}
+            onPress={() => alert('Opening download link: ' + item.downloadLink)}
+          >
+            <Text style={styles.downloadLinkText}>📥 Download Now</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+
+    return (
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.downloadsHeader}>
+          <Text style={styles.downloadsTitle}>⏳ Download Requests</Text>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={loadDownloadRequests}
+            disabled={isProcessing}
+          >
+            <Text style={styles.refreshButtonText}>↻</Text>
+          </TouchableOpacity>
+        </View>
+
+        {downloadRequests.length === 0 ? (
+          <Text style={styles.emptyText}>No pending download requests. Request books to get started!</Text>
+        ) : (
+          <FlatList
+            data={downloadRequests}
+            renderItem={({ item }) => renderRequestItem(item)}
+            keyExtractor={(item) => item.requestId}
+            scrollEnabled={false}
+          />
+        )}
+      </ScrollView>
+    );
+  };
+
+  // Render user history tab
+  const renderHistoryTab = () => {
+    const renderHistoryItem = (item) => (
+      <View style={styles.historyItem}>
+        <View style={styles.historyHeader}>
+          <Text style={styles.historyTitle}>{item.bookTitle}</Text>
+        </View>
+        <Text style={styles.historyAuthor}>Author: {item.bookAuthor}</Text>
+        <Text style={styles.historyFormat}>Format: {item.format}</Text>
+        <TouchableOpacity
+          style={styles.historyDownloadButton}
+          onPress={() => {
+            if (item.downloadLink) {
+              alert('Opening download link: ' + item.downloadLink);
+            } else {
+              alert('Download link not available');
+            }
+          }}
+        >
+          <Text style={styles.historyDownloadButtonText}>📥 Access Book</Text>
+        </TouchableOpacity>
+      </View>
+    );
+
+    return (
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.downloadsHeader}>
+          <Text style={styles.downloadsTitle}>📖 Reading History</Text>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={loadUserHistory}
+            disabled={isProcessing}
+          >
+            <Text style={styles.refreshButtonText}>↻</Text>
+          </TouchableOpacity>
+        </View>
+
+        {userHistory.length === 0 ? (
+          <Text style={styles.emptyText}>No reading history yet. Browse and read books to see them here!</Text>
+        ) : (
+          <FlatList
+            data={userHistory}
+            renderItem={({ item }) => renderHistoryItem(item)}
+            keyExtractor={(item) => item.bookId}
+            scrollEnabled={false}
+          />
+        )}
+      </ScrollView>
+    );
+  };
 
   // Book Details Modal
   const renderBookDetailsModal = () => (
@@ -337,14 +512,15 @@ export default function SugamyaLibraryScreen() {
               </View>
 
               <TouchableOpacity
-                style={styles.downloadButton}
-                onPress={() => {
-                  // TODO: Implement download request
-                  setBookDetailsModalVisible(false);
-                  alert('Download feature coming soon');
-                }}
+                style={[styles.downloadButton, isRequestingDownload && styles.downloadButtonDisabled]}
+                onPress={handleRequestDownload}
+                disabled={isRequestingDownload}
               >
-                <Text style={styles.downloadButtonText}>📥 Request Download</Text>
+                {isRequestingDownload ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={styles.downloadButtonText}>📥 Request Download</Text>
+                )}
               </TouchableOpacity>
             </ScrollView>
           )}
@@ -386,7 +562,7 @@ export default function SugamyaLibraryScreen() {
             ⭐ Popular
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={[styles.tab, activeTab === 'downloads' && styles.tabActive]}
           onPress={() => setActiveTab('downloads')}
         >
@@ -395,6 +571,26 @@ export default function SugamyaLibraryScreen() {
           >
             📥 Downloads
           </Text>
+        </TouchableOpacity> */}
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'downloadRequests' && styles.tabActive]}
+          onPress={() => setActiveTab('downloadRequests')}
+        >
+          <Text
+            style={[styles.tabText, activeTab === 'downloadRequests' && styles.tabTextActive]}
+          >
+            ⏳ Requests
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'history' && styles.tabActive]}
+          onPress={() => setActiveTab('history')}
+        >
+          <Text
+            style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}
+          >
+            📖 History
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -402,6 +598,8 @@ export default function SugamyaLibraryScreen() {
       {activeTab === 'search' && renderSearchTab()}
       {activeTab === 'popular' && renderPopularTab()}
       {activeTab === 'downloads' && renderDownloadsTab()}
+      {activeTab === 'downloadRequests' && renderDownloadRequestsTab()}
+      {activeTab === 'history' && renderHistoryTab()}
 
       {/* Book Details Modal */}
       {renderBookDetailsModal()}
@@ -739,9 +937,105 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
   },
+  downloadButtonDisabled: {
+    opacity: 0.6,
+  },
   downloadButtonText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Download Requests Styles
+  requestItem: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.warning,
+  },
+  requestHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  requestTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    flex: 1,
+    marginRight: 8,
+  },
+  requestStatus: {
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: '#fef3c7',
+  },
+  requestFormat: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  requestExpiry: {
+    fontSize: 11,
+    color: COLORS.danger,
+    marginBottom: 8,
+  },
+  downloadLinkButton: {
+    backgroundColor: COLORS.success,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  downloadLinkText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  // History Tab Styles
+  historyItem: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+  },
+  historyHeader: {
+    marginBottom: 8,
+  },
+  historyTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  historyAuthor: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  historyFormat: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+  },
+  historyDownloadButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  historyDownloadButtonText: {
+    color: 'white',
+    fontSize: 13,
     fontWeight: '600',
   },
 });
