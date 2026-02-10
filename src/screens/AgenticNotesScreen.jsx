@@ -292,7 +292,7 @@ ${(currentNote.conversationHistory || [])
 
                 {isLoadingHistory ? (
                     <View style={styles.centerContainer}>
-                        <ActivityIndicator size="large" color="#007AFF" />
+                        <ActivityIndicator size="large" color="#000000" />
                         <Text style={styles.loadingText}>Loading notes...</Text>
                     </View>
                 ) : notes.length === 0 ? (
@@ -363,7 +363,7 @@ ${(currentNote.conversationHistory || [])
 
             {isLoadingHistory ? (
                 <View style={styles.centerContainer}>
-                    <ActivityIndicator size="large" color="#007AFF" />
+                    <ActivityIndicator size="large" color="#000000" />
                     <Text style={styles.loadingText}>Loading conversation...</Text>
                 </View>
             ) : (
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
     },
     refreshButtonText: {
         fontSize: 20,
-        color: '#007AFF',
+        color: '#000000',
     },
     centerContainer: {
         flex: 1,
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     startButton: {
-        backgroundColor: '#007AFF',
+        backgroundColor: '#000000',
         paddingHorizontal: 24,
         paddingVertical: 12,
         borderRadius: 6,
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
     },
     noteArrow: {
         fontSize: 24,
-        color: '#007AFF',
+        color: '#000000',
         marginLeft: 12,
     },
     conversationHeader: {
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
     backButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#007AFF',
+        color: '#000000',
     },
     conversationTitle: {
         fontSize: 16,
@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
     },
     userBubble: {
         alignSelf: 'flex-end',
-        backgroundColor: '#007AFF',
+        backgroundColor: '#000000',
         marginRight: 8,
     },
     agentBubble: {
@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
         maxHeight: 100,
     },
     sendButton: {
-        backgroundColor: '#007AFF',
+        backgroundColor: '#000000',
         paddingHorizontal: 20,
         paddingVertical: 10,
         borderRadius: 8,
@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     exportButton: {
-        backgroundColor: '#34C759',
+        backgroundColor: '#000000',
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 6,
