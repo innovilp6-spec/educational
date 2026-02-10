@@ -1,9 +1,10 @@
 /**
  * User Registration Screen
- * Collects all required user information for account creation
+ * Multi-step form collecting user information including NALP student profile
+ * Steps: Basic → Education → Student Profile → Services → Formats
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +17,7 @@ import {
   Alert,
   Switch,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthContext';
 
@@ -34,19 +36,109 @@ const SUGAMYA_FORMATS = [
   'EPUB with Media Overlay',
 ];
 
+// Hardcoded NALP Profile Options
+const NALP_PROFILE_OPTIONS = {
+  k12_levels: [
+    'Pre Kindergarden',
+    'Kindergarden',
+    'Grade 1',
+    'Grade 2',
+    'Grade 3',
+    'Grade 4',
+    'Grade 5',
+    'Grade 6',
+    'Grade 7',
+    'Grade 8',
+    'Grade 9',
+    'Grade 10',
+    'Grade 11',
+    'Grade 12',
+    'High School',
+  ],
+  higher_education: [
+    'College First Year',
+    'College Second Year',
+    'College Third Year',
+    'College Fourth Year',
+    'Undergraduate',
+    'Post Graduate',
+  ],
+  professional_and_vocational: [
+    'Medical',
+    'Professional',
+    'Engineering',
+    'Pre-Professional',
+    'Competitive Examination',
+    'B.Ed.',
+    'Law',
+    'CA',
+    'CWA',
+    'CS',
+    'MCA',
+    'MBA',
+    'Agriculture and Rural Development',
+    'Adult Education',
+  ],
+  university_specializations: [
+    'University Geography',
+    'University History',
+    'University Maths',
+    'University Physics',
+    'University Chemistry',
+    'University Biology',
+    'University Economics',
+    'University Political Science',
+    'University Philosophy',
+    'University English',
+    'University Hindi',
+    'University Sanskrit',
+    'University Urdu',
+    'University Psychology',
+    'University Sociology',
+    'University Commerce',
+    'University Accounting',
+    'University Statistics',
+    'University Botany',
+    'University Zoology',
+    'University Geology',
+    'University Home Science',
+    'University Music',
+  ],
+  school_subjects: [
+    'School English',
+    'School Hindi',
+    'School Mathematics',
+    'School Science',
+    'School Social Studies',
+    'School Marathi',
+    'School Sanskrit',
+    'School Biology',
+    'School Physics',
+    'School Chemistry',
+    'School History',
+    'School Geography',
+    'School Civics',
+    'School Physical Education',
+    'School Computer Science',
+  ],
+};
+
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
-  
-  // Form fields
+
+  // Form fields - Basic Info
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [language, setLanguage] = useState('English'); // Default language
+  const [language, setLanguage] = useState('English');
   const [educationStandard, setEducationStandard] = useState('');
   const [educationBoard, setEducationBoard] = useState('');
   const [sugamyaUsername, setSugamyaUsername] = useState('');
   const [sugamyaPassword, setSugamyaPassword] = useState('');
+
+  // NALP Profile - only one value (determined by education standard)
+  const [nalpProfileValue, setNalpProfileValue] = useState(null);
 
   // Service preferences
   const [services, setServices] = useState({
@@ -62,11 +154,25 @@ export default function RegisterScreen({ navigation }) {
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [activeStep, setActiveStep] = useState('basic'); // basic, education, services, formats
+  const [activeStep, setActiveStep] = useState('basic'); // basic, education, sugamya, services, formats
+
+  // Determine which profile category to show based on education standard
+  const getProfileCategoryForStandard = () => {
+    if (!educationStandard) return null;
+    const std = parseInt(educationStandard);
+    if (std >= 6 && std <= 12) return 'k12_levels';
+    return null; // Standard grades only have K-12 profiles
+  };
+
+  const getCurrentProfileOptions = () => {
+    const category = getProfileCategoryForStandard();
+    if (!category) return [];
+    return NALP_PROFILE_OPTIONS[category] || [];
+  };
 
   // Validation
   const isBasicValid = name.trim() && email.trim() && password && confirmPassword && password === confirmPassword;
-  const isEducationValid = educationStandard && educationBoard;
+  const isEducationValid = educationStandard && educationBoard; // Profile is optional
   const isFormValid = isBasicValid && isEducationValid && sugamyaFormatPreferences.length > 0;
 
   // Toggle format preference
@@ -96,23 +202,28 @@ export default function RegisterScreen({ navigation }) {
     setIsLoading(true);
 
     try {
+      const payload = {
+        name,
+        email,
+        password,
+        language,
+        educationStandard,
+        educationBoard,
+        services,
+        sugamyaFormatPreferences,
+        sugamyaUsername,
+        sugamyaPassword,
+        nalpProfile: nalpProfileValue ? { [getProfileCategoryForStandard()]: nalpProfileValue } : {}, // Include profile if selected
+      };
+
+      console.log('[REGISTER-SCREEN] Registering with payload:', payload);
+
       const response = await fetch(`${SERVER_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          language,
-          educationStandard,
-          educationBoard,
-          services,
-          sugamyaFormatPreferences,
-          sugamyaUsername,
-          sugamyaPassword,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -124,7 +235,7 @@ export default function RegisterScreen({ navigation }) {
 
       // Registration successful - save to AuthContext
       console.log('[REGISTER-SCREEN] Registration successful for user:', data.user.userId);
-      
+
       const result = await register(data.user);
       if (result.success) {
         Alert.alert(
@@ -232,7 +343,7 @@ export default function RegisterScreen({ navigation }) {
               style={[
                 styles.input,
                 password !== confirmPassword &&
-                  confirmPassword && styles.inputError,
+                confirmPassword && styles.inputError,
               ]}
               placeholder="Confirm password"
               value={confirmPassword}
@@ -275,10 +386,10 @@ export default function RegisterScreen({ navigation }) {
           </View>
         )}
 
-        {/* Education Information */}
+        {/* Education Information + Student Profile */}
         {activeStep === 'education' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Education Details</Text>
+            <Text style={styles.sectionTitle}>📚 Education Details</Text>
 
             <Text style={styles.label}>Education Standard *</Text>
             <View style={styles.pickContainer}>
@@ -289,13 +400,16 @@ export default function RegisterScreen({ navigation }) {
                     styles.pickOption,
                     educationStandard === std && styles.pickOptionActive,
                   ]}
-                  onPress={() => setEducationStandard(std)}
+                  onPress={() => {
+                    setEducationStandard(std);
+                    setNalpProfileValue(null); // Reset profile when standard changes
+                  }}
                 >
                   <Text
                     style={[
                       styles.pickOptionText,
                       educationStandard === std &&
-                        styles.pickOptionTextActive,
+                      styles.pickOptionTextActive,
                     ]}
                   >
                     {std}
@@ -319,7 +433,7 @@ export default function RegisterScreen({ navigation }) {
                     style={[
                       styles.pickOptionText,
                       educationBoard === board &&
-                        styles.pickOptionTextActive,
+                      styles.pickOptionTextActive,
                     ]}
                   >
                     {board}
@@ -327,6 +441,28 @@ export default function RegisterScreen({ navigation }) {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* Conditional Student Profile Selection */}
+            {getCurrentProfileOptions().length > 0 && (
+              <>
+                <Text style={styles.label}>🎓 Student Profile (Optional)</Text>
+                <Text style={styles.description}>
+                  Select a profile that matches your situation for personalized recommendations
+                </Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={nalpProfileValue}
+                    onValueChange={(value) => setNalpProfileValue(value)}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Select a profile (optional)" value={null} />
+                    {getCurrentProfileOptions().map((option) => (
+                      <Picker.Item key={option} label={option} value={option} />
+                    ))}
+                  </Picker>
+                </View>
+              </>
+            )}
 
             <PrimaryButton
               title="Continue to Sugamya"
@@ -394,19 +530,19 @@ export default function RegisterScreen({ navigation }) {
                     {service === 'liveTranscription'
                       ? '🎙️ Live Transcription'
                       : service === 'textToSpeech'
-                      ? '🔊 Text to Speech'
-                      : service === 'simplifiedSummaries'
-                      ? '📝 Simplified Summaries'
-                      : '📚 Sugamya Library'}
+                        ? '🔊 Text to Speech'
+                        : service === 'simplifiedSummaries'
+                          ? '📝 Simplified Summaries'
+                          : '📚 Sugamya Library'}
                   </Text>
                   <Text style={styles.serviceDescription}>
                     {service === 'liveTranscription'
                       ? 'Convert spoken lectures to text'
                       : service === 'textToSpeech'
-                      ? 'Listen to content being read aloud'
-                      : service === 'simplifiedSummaries'
-                      ? 'Get simplified study notes'
-                      : 'Access accessible digital books'}
+                        ? 'Listen to content being read aloud'
+                        : service === 'simplifiedSummaries'
+                          ? 'Get simplified study notes'
+                          : 'Access accessible digital books'}
                   </Text>
                 </View>
                 <Switch
@@ -440,7 +576,7 @@ export default function RegisterScreen({ navigation }) {
                   style={[
                     styles.formatCard,
                     sugamyaFormatPreferences.includes(format) &&
-                      styles.formatCardActive,
+                    styles.formatCardActive,
                   ]}
                   onPress={() => toggleFormat(format)}
                 >
@@ -448,7 +584,7 @@ export default function RegisterScreen({ navigation }) {
                     style={[
                       styles.formatText,
                       sugamyaFormatPreferences.includes(format) &&
-                        styles.formatTextActive,
+                      styles.formatTextActive,
                     ]}
                   >
                     {sugamyaFormatPreferences.includes(format) ? '✓' : '○'} {format}
@@ -666,5 +802,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666666',
     lineHeight: 18,
+  },
+  profileSection: {
+    marginBottom: 16,
+  },
+  profileLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: '#ffffff',
+    marginBottom: 12,
+  },
+  picker: {
+    height: 50,
+    color: '#000000',
+  },
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#666666',
+    marginTop: 12,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#ff6666',
+    marginBottom: 8,
   },
 });

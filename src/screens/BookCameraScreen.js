@@ -8,11 +8,14 @@ import {
     Alert,
     Modal,
     TextInput,
+    ScrollView,
 } from 'react-native';
 import { useCameraPermission, Camera, useCameraDevice } from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@react-native-vector-icons/fontawesome';
 import RNFS from 'react-native-fs';
+import InfoButton from '../components/InfoButton';
+import { NAMING_NOMENCLATURE, DETAILED_GUIDELINES, validateName } from '../utils/namingNomenclature';
 
 const BookCameraScreen = ({ navigation }) => {
     const [capturedImages, setCapturedImages] = useState([]);
@@ -129,6 +132,13 @@ const BookCameraScreen = ({ navigation }) => {
     const handleTitleConfirm = async () => {
         if (!bookTitle.trim()) {
             Alert.alert('Title Required', 'Please enter a title for your book.');
+            return;
+        }
+
+        // Validate title
+        const validation = validateName('book', bookTitle);
+        if (!validation.valid) {
+            Alert.alert('Invalid Title', validation.error);
             return;
         }
 
@@ -316,25 +326,51 @@ const BookCameraScreen = ({ navigation }) => {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Book Title</Text>
+                            <InfoButton
+                                title={DETAILED_GUIDELINES.book.title}
+                                rules={DETAILED_GUIDELINES.book.rules}
+                                tips={DETAILED_GUIDELINES.book.tips}
+                                size={20}
+                                color="#007AFF"
+                            />
                         </View>
 
-                        <View style={styles.modalBody}>
-                            <Text style={styles.modalLabel}>
-                                What would you like to name this captured book?
-                            </Text>
-                            <TextInput
-                                style={styles.titleInput}
-                                placeholder="Enter book title..."
-                                placeholderTextColor="#999"
-                                value={bookTitle}
-                                onChangeText={setBookTitle}
-                                autoFocus={true}
-                                maxLength={100}
-                            />
-                            <Text style={styles.charCount}>
-                                {bookTitle.length}/100 characters
-                            </Text>
-                        </View>
+                        <ScrollView style={styles.modalScrollView}>
+                            {/* Nomenclature Pattern */}
+                            <View style={styles.patternCard}>
+                                <Text style={styles.patternLabel}>Suggested Format:</Text>
+                                <Text style={styles.pattern}>{NAMING_NOMENCLATURE.book.pattern}</Text>
+                                <Text style={styles.patternExample}>Example: {NAMING_NOMENCLATURE.book.example}</Text>
+                            </View>
+
+                            {/* Quick Guidelines */}
+                            <View style={styles.guidelinesCard}>
+                                <Text style={styles.guidelinesTitle}>Quick Guidelines:</Text>
+                                {NAMING_NOMENCLATURE.book.guidelines.slice(0, 3).map((guideline, index) => (
+                                    <Text key={index} style={styles.guidelineItem}>
+                                        {guideline}
+                                    </Text>
+                                ))}
+                            </View>
+
+                            <View style={styles.modalBody}>
+                                <Text style={styles.modalLabel}>
+                                    What would you like to name this captured book?
+                                </Text>
+                                <TextInput
+                                    style={styles.titleInput}
+                                    placeholder={NAMING_NOMENCLATURE.book.example}
+                                    placeholderTextColor="#999"
+                                    value={bookTitle}
+                                    onChangeText={setBookTitle}
+                                    autoFocus={true}
+                                    maxLength={100}
+                                />
+                                <Text style={styles.charCount}>
+                                    {bookTitle.length}/100 characters
+                                </Text>
+                            </View>
+                        </ScrollView>
 
                         <View style={styles.modalFooter}>
                             <TouchableOpacity
@@ -526,6 +562,7 @@ const styles = StyleSheet.create({
         width: '100%',
         maxWidth: 400,
         overflow: 'hidden',
+        maxHeight: '85%',
     },
     modalHeader: {
         backgroundColor: '#f5f5f5',
@@ -533,12 +570,73 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     modalTitle: {
         fontSize: 18,
         fontWeight: '600',
         color: '#000',
+        flex: 1,
     },
+    modalScrollView: {
+        maxHeight: 300,
+    },
+
+    // Nomenclature Cards in Modal
+    patternCard: {
+        backgroundColor: '#e3f2fd',
+        borderRadius: 12,
+        padding: 16,
+        marginHorizontal: 20,
+        marginTop: 16,
+        marginBottom: 12,
+        borderLeftWidth: 4,
+        borderLeftColor: '#007AFF',
+    },
+    patternLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#007AFF',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 8,
+    },
+    pattern: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#1976d2',
+        marginBottom: 8,
+        fontStyle: 'italic',
+    },
+    patternExample: {
+        fontSize: 13,
+        color: '#555',
+        fontStyle: 'italic',
+    },
+    guidelinesCard: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 16,
+        marginHorizontal: 20,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    guidelinesTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#333',
+        marginBottom: 12,
+    },
+    guidelineItem: {
+        fontSize: 12,
+        color: '#555',
+        lineHeight: 18,
+        marginBottom: 8,
+    },
+
     modalBody: {
         paddingHorizontal: 20,
         paddingVertical: 20,

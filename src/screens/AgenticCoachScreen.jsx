@@ -12,10 +12,11 @@ import {
     Alert,
 } from 'react-native';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import { QuizMessageBubble, QuizResultsBubble } from '../components/QuizMessageBubble';
 
 export default function AgenticCoachScreen({ route, navigation }) {
     const { transcriptId, sessionName, transcript, contextType } = route.params || {};
-    
+
     // Ensure we have valid values
     const validTranscriptId = transcriptId || null;
     const validContextType = contextType || 'general';
@@ -29,7 +30,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
     const [currentInteractionId, setCurrentInteractionId] = useState(null);
 
     // API hook
-    const { askCoach, getCoachHistory, askCoachFollowup } = useTranscriptAPI();
+    const { askCoach, getCoachHistory, askCoachFollowup, generateQuiz, submitQuizAnswers } = useTranscriptAPI();
 
     // Scroll reference
     const scrollViewRef = useRef(null);
@@ -116,50 +117,83 @@ export default function AgenticCoachScreen({ route, navigation }) {
                 timestamp: new Date(),
             }]);
 
-            let response;
+            // Detect if user is asking for a quiz
+            const quizKeywords = ['quiz', 'test', 'exam', 'questions', 'practice questions', 'assessment'];
+            const isQuizRequest = quizKeywords.some(keyword =>
+                userMessage.toLowerCase().includes(keyword)
+            );
 
-            // Decide whether to ask a new question or follow-up
-            if (currentInteractionId) {
-                // Ask follow-up to existing conversation
-                console.log('Asking coach follow-up question...');
-                response = await askCoachFollowup(currentInteractionId, userMessage);
-            } else {
-                // Ask new question with context
-                console.log('Asking coach new question with context...');
-                response = await askCoach(
-                    userMessage,
+            if (isQuizRequest) {
+                // Extract topic from message (everything after quiz request keyword)
+                let topic = userMessage;
+                quizKeywords.forEach(keyword => {
+                    const regex = new RegExp(keyword, 'i');
+                    topic = userMessage.replace(regex, '').trim();
+                });
+                topic = topic || userMessage; // Fallback to full message if extraction fails
+
+                console.log('[QUIZ] Quiz request detected, topic:', topic);
+
+                // Generate quiz
+                const quizResult = await generateQuiz(
+                    topic,
                     simplificationLevel,
-                    validContextType, // contextType (valid: lecture, note, book, general)
-                    validTranscriptId // contextId
+                    validContextType,
+                    validTranscriptId
                 );
-            }
 
-            // Add coach response
-            console.log('Coach response object:', JSON.stringify(response, null, 2));
+                // Add quiz message bubble
+                setMessages(prev => [...prev, {
+                    id: quizResult.quizSessionId,
+                    type: 'quiz',
+                    quiz: quizResult.quiz,
+                    quizSessionId: quizResult.quizSessionId,
+                    timestamp: new Date(),
+                }]);
+            } else {
+                // Regular coach question
+                let response;
 
-            // Only add response if backend saved it (not a context-switch)
-            if (response && response.interactionId) {
-                if (response.coachResponse) {
+                // Decide whether to ask a new question or follow-up
+                if (currentInteractionId) {
+                    // Ask follow-up to existing conversation
+                    console.log('Asking coach follow-up question...');
+                    response = await askCoachFollowup(currentInteractionId, userMessage);
+                } else {
+                    // Ask new question with context
+                    console.log('Asking coach new question with context...');
+                    response = await askCoach(
+                        userMessage,
+                        simplificationLevel,
+                        validContextType, // contextType (valid: lecture, note, book, general)
+                        validTranscriptId // contextId
+                    );
+                }
+
+                // Add coach response
+                console.log('Coach response object:', JSON.stringify(response, null, 2));
+
+                // Only add response if backend saved it (not a context-switch)
+                const interactionId = response?.interactionId || response?._id;
+                if (response && interactionId && response.coachResponse) {
                     setMessages(prev => [...prev, {
-                        id: response.interactionId,
+                        id: interactionId,
                         type: 'coach',
                         text: response.coachResponse,
                         timestamp: response.createdAt || new Date(),
                     }]);
 
                     // Update current interaction ID for follow-ups
-                    setCurrentInteractionId(response.interactionId);
+                    setCurrentInteractionId(interactionId);
+                } else if (response && response.isContextSwitch) {
+                    // Context-switch detected in context coach - treat as error
+                    // Context switching only supported in general coach
+                    console.log('Context-switch detected in context coach - not supported here');
+                    throw new Error('Context switching is only available in General Coach');
                 } else {
-                    console.log('No coach response - unexpected in context-aware coach');
+                    console.log('Response validation failed. Response:', response);
+                    throw new Error('Invalid response from coach API');
                 }
-            } else if (response && response.isContextSwitch) {
-                // Context-switch detected in context coach - treat as error
-                // Context switching only supported in general coach
-                console.log('Context-switch detected in context coach - not supported here');
-                throw new Error('Context switching is only available in General Coach');
-            } else {
-                console.log('Response validation failed. Response:', response);
-                throw new Error('Invalid response from coach API');
             }
         } catch (error) {
             console.error('Error sending message:', error);
@@ -172,6 +206,37 @@ export default function AgenticCoachScreen({ route, navigation }) {
             }]);
 
             Alert.alert('Error', 'Failed to get response from coach. Please check your connection and try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSubmitQuizAnswers = async (quizData) => {
+        try {
+            setIsLoading(true);
+            const { quizSessionId, answers } = quizData;
+
+            console.log('[QUIZ-SUBMIT] Submitting quiz answers for session:', quizSessionId);
+
+            const result = await submitQuizAnswers(quizSessionId, answers);
+
+            // Add results message bubble
+            // Find the quiz message to get the quiz data
+            const quizMessage = messages.find(m => m.quizSessionId === quizSessionId);
+            if (quizMessage) {
+                setMessages(prev => [...prev, {
+                    id: result.evaluationId,
+                    type: 'quiz-results',
+                    quiz: quizMessage.quiz,
+                    evaluation: result,
+                    timestamp: new Date(),
+                }]);
+            }
+
+            console.log('[QUIZ-SUBMIT] Quiz evaluation complete, marks:', result.marksObtained);
+        } catch (error) {
+            console.error('Error submitting quiz:', error);
+            Alert.alert('Error', 'Failed to submit quiz. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -198,7 +263,36 @@ export default function AgenticCoachScreen({ route, navigation }) {
     const renderMessage = (message) => {
         const isUserMessage = message.type === 'user';
         const isErrorMessage = message.type === 'error';
+        const isQuizMessage = message.type === 'quiz';
+        const isQuizResultsMessage = message.type === 'quiz-results';
 
+        // Handle quiz message bubble
+        if (isQuizMessage && message.quiz) {
+            return (
+                <View key={message.id} style={styles.messageWrapper}>
+                    <QuizMessageBubble
+                        quiz={message.quiz}
+                        quizSessionId={message.quizSessionId}
+                        onSubmitAnswers={handleSubmitQuizAnswers}
+                        isSubmitting={isLoading}
+                    />
+                </View>
+            );
+        }
+
+        // Handle quiz results message bubble
+        if (isQuizResultsMessage && message.evaluation) {
+            return (
+                <View key={message.id} style={styles.messageWrapper}>
+                    <QuizResultsBubble
+                        quiz={message.quiz}
+                        evaluation={message.evaluation}
+                    />
+                </View>
+            );
+        }
+
+        // Handle regular messages
         return (
             <View
                 key={message.id}

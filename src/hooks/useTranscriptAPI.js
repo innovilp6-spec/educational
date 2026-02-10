@@ -339,6 +339,69 @@ export default function useTranscriptAPI() {
         }
     };
 
+    // Generate quiz based on topic
+    const generateQuiz = async (topic, simplificationLevel = 3, contextType = "general", contextId = null) => {
+        try {
+            console.log("Generating quiz:", { topic, contextType, contextId, simplificationLevel });
+
+            const response = await makeServerRequest("/api/coach/agentic/quiz", "POST", {
+                topic,
+                simplificationLevel,
+                contextType,
+                contextId,
+            });
+
+            console.log("Quiz generated response:", JSON.stringify(response, null, 2));
+
+            if (response?.success && response?.quiz && response?.quizSessionId) {
+                return {
+                    quizSessionId: response.quizSessionId,
+                    quiz: response.quiz,
+                    processingTime: response.processingTime,
+                };
+            }
+
+            throw new Error("Failed to generate quiz");
+        } catch (err) {
+            console.error("Error generating quiz:", err);
+            throw err;
+        }
+    };
+
+    // Submit quiz answers and get evaluation
+    const submitQuizAnswers = async (quizSessionId, answers) => {
+        try {
+            console.log("Submitting quiz answers:", { quizSessionId, answersCount: Object.keys(answers).length });
+
+            const response = await makeServerRequest(
+                `/api/coach/agentic/quiz/${quizSessionId}/submit`,
+                "POST",
+                { answers }
+            );
+
+            console.log("Quiz evaluation response:", JSON.stringify(response, null, 2));
+
+            if (response?.success) {
+                return {
+                    evaluationId: response.evaluationId,
+                    marksObtained: response.marksObtained,
+                    totalMarks: response.totalMarks,
+                    correctAnswers: response.correctAnswers,
+                    totalQuestions: response.totalQuestions,
+                    isPassed: response.isPassed,
+                    remarks: response.remarks,
+                    detailedResults: response.detailedResults,
+                    processingTime: response.processingTime,
+                };
+            }
+
+            throw new Error("Failed to evaluate quiz");
+        } catch (err) {
+            console.error("Error submitting quiz answers:", err);
+            throw err;
+        }
+    };
+
     // Get all notes for user
     const getUserNotes = async () => {
         try {
@@ -1002,6 +1065,8 @@ export default function useTranscriptAPI() {
         askCoach,
         getCoachHistory,
         askCoachFollowup,
+        generateQuiz,
+        submitQuizAnswers,
         getUserNotes,
         createNote,
         deleteNote,

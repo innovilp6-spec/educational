@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
 import PrimaryButton from '../components/PrimaryButton';
+import InfoButton from '../components/InfoButton';
+import { NAMING_NOMENCLATURE, DETAILED_GUIDELINES, validateName } from '../utils/namingNomenclature';
 
 export default function NotesScreen({ navigation }) {
     const [notes, setNotes] = useState([]);
@@ -53,6 +55,13 @@ export default function NotesScreen({ navigation }) {
     const handleCreateNote = async () => {
         if (!newNoteData.title || !newNoteData.content) {
             Alert.alert('Error', 'Title and content are required');
+            return;
+        }
+
+        // Validate title
+        const validation = validateName('note', newNoteData.title);
+        if (!validation.valid) {
+            Alert.alert('Invalid Title', validation.error);
             return;
         }
 
@@ -191,6 +200,9 @@ export default function NotesScreen({ navigation }) {
 
     // Show create note form
     if (showCreateForm) {
+        const nomenclature = NAMING_NOMENCLATURE.note;
+        const guidelines = DETAILED_GUIDELINES.note;
+
         return (
             <View style={styles.container}>
                 <View style={styles.formHeader}>
@@ -201,16 +213,42 @@ export default function NotesScreen({ navigation }) {
                         <Text style={styles.backButtonText}>← Back</Text>
                     </TouchableOpacity>
                     <Text style={styles.formTitle}>Create New Note</Text>
+                    <InfoButton
+                        title={guidelines.title}
+                        rules={guidelines.rules}
+                        tips={guidelines.tips}
+                        size={20}
+                        color="#007AFF"
+                    />
                 </View>
 
                 <ScrollView style={styles.formContainer}>
-                    <Text style={styles.label}>Title *</Text>
+                    {/* Nomenclature Pattern Display */}
+                    <View style={styles.patternCard}>
+                        <Text style={styles.patternLabel}>Suggested Format:</Text>
+                        <Text style={styles.pattern}>{nomenclature.pattern}</Text>
+                        <Text style={styles.patternExample}>Example: {nomenclature.example}</Text>
+                    </View>
+
+                    {/* Quick Guidelines */}
+                    <View style={styles.guidelinesCard}>
+                        <Text style={styles.guidelinesTitle}>Quick Guidelines:</Text>
+                        {nomenclature.guidelines.slice(0, 3).map((guideline, index) => (
+                            <Text key={index} style={styles.guidelineItem}>
+                                {guideline}
+                            </Text>
+                        ))}
+                    </View>
+
+                    <Text style={styles.label}>Title * (Follow naming convention)</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Note title"
+                        placeholder={nomenclature.example}
+                        placeholderTextColor="#bbb"
                         value={newNoteData.title}
                         onChangeText={(text) => setNewNoteData({ ...newNoteData, title: text })}
                         editable={!isLoading}
+                        maxLength={100}
                     />
 
                     <Text style={styles.label}>Note Name (optional label)</Text>
@@ -547,6 +585,57 @@ const styles = StyleSheet.create({
         minHeight: 120,
         textAlignVertical: 'top',
     },
+
+    // Nomenclature Cards
+    patternCard: {
+        backgroundColor: '#e3f2fd',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 16,
+        borderLeftWidth: 4,
+        borderLeftColor: '#007AFF',
+    },
+    patternLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#007AFF',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 8,
+    },
+    pattern: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1976d2',
+        marginBottom: 8,
+        fontStyle: 'italic',
+    },
+    patternExample: {
+        fontSize: 13,
+        color: '#555',
+        fontStyle: 'italic',
+    },
+    guidelinesCard: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    guidelinesTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#333',
+        marginBottom: 12,
+    },
+    guidelineItem: {
+        fontSize: 12,
+        color: '#555',
+        lineHeight: 18,
+        marginBottom: 8,
+    },
+
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
