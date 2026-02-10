@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import PrimaryButton from '../components/PrimaryButton';
 import { getBookDetailById } from '../services/mockApiService';
+import { useConfig } from '../hooks/useConfig';
 
 export default function HomeScreen({ navigation }) {
   const handleOpenBookDetail = () => {
@@ -14,31 +15,30 @@ export default function HomeScreen({ navigation }) {
     });
   };
 
+  const { servicePreferences } = useConfig();
+
   return (
-    <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
-      <Text style={{ fontSize: 26, marginBottom: 24 }}>
+    <View style={styles.container}>
+      <Text style={styles.title}>
         Accessibility Study App
       </Text>
 
-      {/* DEBUG: Temporary button to test BookDetailScreen */}
-      {/* <PrimaryButton
-        title="🧪 DEBUG: Open Book Detail"
-        onPress={handleOpenBookDetail}
-      /> */}
+      {/* Recording Lecture - Only show if recordingsLecture preference is enabled */}
+      {servicePreferences.recordingsLecture && (
+        <PrimaryButton
+          title="Record a Lecture"
+          onPress={() => navigation.navigate('LectureCapture')}
+        />
+      )}
+      
+      {/* My Recordings - Only show if recordingsLecture preference is enabled */}
+      {servicePreferences.recordingsLecture && (
+        <PrimaryButton
+          title="My Recordings"
+          onPress={() => navigation.navigate('RecordingsList')}
+        />
+      )}
 
-      {/* <PrimaryButton
-        title="🧪 DEBUG: Test Audio Transcription"
-        onPress={() => navigation.navigate('DebugTranscribe')}
-      /> */}
-
-      <PrimaryButton
-        title="Record a Lecture"
-        onPress={() => navigation.navigate('LectureCapture')}
-      />
-      <PrimaryButton
-        title="My Recordings"
-        onPress={() => navigation.navigate('RecordingsList')}
-      />
       <PrimaryButton
         title="Coach (Ask Questions)"
         onPress={() => navigation.navigate('GeneralCoach')}
@@ -47,15 +47,14 @@ export default function HomeScreen({ navigation }) {
         title="My Notes"
         onPress={() => navigation.navigate('Notes')}
       />
-      {/* <PrimaryButton
-        title="My Study Library"
-        onPress={() => navigation.navigate('StudyLibrary')}
-      /> */}
 
-      <PrimaryButton
-        title="Read a Book"
-        onPress={() => navigation.navigate('CapturedBooksLibrary')}
-      />
+      {/* Read a Book - Only show if captureBooks preference is enabled */}
+      {servicePreferences.captureBooks && (
+        <PrimaryButton
+          title="Read a Book"
+          onPress={() => navigation.navigate('CapturedBooksLibrary')}
+        />
+      )}
 
       <PrimaryButton
         title="Sugamya Pustakalaya"
@@ -64,3 +63,17 @@ export default function HomeScreen({ navigation }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 26,
+    marginBottom: 24,
+    fontWeight: '600',
+    color: '#000000',
+  },
+});

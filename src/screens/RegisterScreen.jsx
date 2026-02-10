@@ -1,7 +1,7 @@
 /**
  * User Registration Screen
- * Multi-step form collecting user information including NALP student profile
- * Steps: Basic → Education → Student Profile → Services → Formats
+ * Multi-step form collecting user information including service preferences
+ * Steps: Basic → Education → Services → Formats
  */
 
 import React, { useState, useEffect } from 'react';
@@ -17,9 +17,11 @@ import {
   Alert,
   Switch,
 } from 'react-native';
+import { useDispatch } from 'react-redux';
 import { Picker } from '@react-native-picker/picker';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthContext';
+import { setServicePreferences as dispatchSetServicePreferences } from '../store/slices/configSlice';
 
 const SERVER_BASE_URL = 'http://10.0.2.2:5000';
 
@@ -36,95 +38,9 @@ const SUGAMYA_FORMATS = [
   'EPUB with Media Overlay',
 ];
 
-// Hardcoded NALP Profile Options
-const NALP_PROFILE_OPTIONS = {
-  k12_levels: [
-    'Pre Kindergarden',
-    'Kindergarden',
-    'Grade 1',
-    'Grade 2',
-    'Grade 3',
-    'Grade 4',
-    'Grade 5',
-    'Grade 6',
-    'Grade 7',
-    'Grade 8',
-    'Grade 9',
-    'Grade 10',
-    'Grade 11',
-    'Grade 12',
-    'High School',
-  ],
-  higher_education: [
-    'College First Year',
-    'College Second Year',
-    'College Third Year',
-    'College Fourth Year',
-    'Undergraduate',
-    'Post Graduate',
-  ],
-  professional_and_vocational: [
-    'Medical',
-    'Professional',
-    'Engineering',
-    'Pre-Professional',
-    'Competitive Examination',
-    'B.Ed.',
-    'Law',
-    'CA',
-    'CWA',
-    'CS',
-    'MCA',
-    'MBA',
-    'Agriculture and Rural Development',
-    'Adult Education',
-  ],
-  university_specializations: [
-    'University Geography',
-    'University History',
-    'University Maths',
-    'University Physics',
-    'University Chemistry',
-    'University Biology',
-    'University Economics',
-    'University Political Science',
-    'University Philosophy',
-    'University English',
-    'University Hindi',
-    'University Sanskrit',
-    'University Urdu',
-    'University Psychology',
-    'University Sociology',
-    'University Commerce',
-    'University Accounting',
-    'University Statistics',
-    'University Botany',
-    'University Zoology',
-    'University Geology',
-    'University Home Science',
-    'University Music',
-  ],
-  school_subjects: [
-    'School English',
-    'School Hindi',
-    'School Mathematics',
-    'School Science',
-    'School Social Studies',
-    'School Marathi',
-    'School Sanskrit',
-    'School Biology',
-    'School Physics',
-    'School Chemistry',
-    'School History',
-    'School Geography',
-    'School Civics',
-    'School Physical Education',
-    'School Computer Science',
-  ],
-};
-
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
+  const dispatch = useDispatch();
 
   // Form fields - Basic Info
   const [name, setName] = useState('');
@@ -137,10 +53,14 @@ export default function RegisterScreen({ navigation }) {
   const [sugamyaUsername, setSugamyaUsername] = useState('');
   const [sugamyaPassword, setSugamyaPassword] = useState('');
 
-  // NALP Profile - only one value (determined by education standard)
-  const [nalpProfileValue, setNalpProfileValue] = useState(null);
+  // Service preferences (the three main services)
+  const [servicePreferences, setServicePreferences] = useState({
+    recordingsLecture: false,
+    captureBooks: false,
+    voiceModality: false,
+  });
 
-  // Service preferences
+  // Legacy services (kept for backward compatibility)
   const [services, setServices] = useState({
     liveTranscription: false,
     textToSpeech: false,
@@ -154,26 +74,20 @@ export default function RegisterScreen({ navigation }) {
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [activeStep, setActiveStep] = useState('basic'); // basic, education, sugamya, services, formats
-
-  // Determine which profile category to show based on education standard
-  const getProfileCategoryForStandard = () => {
-    if (!educationStandard) return null;
-    const std = parseInt(educationStandard);
-    if (std >= 6 && std <= 12) return 'k12_levels';
-    return null; // Standard grades only have K-12 profiles
-  };
-
-  const getCurrentProfileOptions = () => {
-    const category = getProfileCategoryForStandard();
-    if (!category) return [];
-    return NALP_PROFILE_OPTIONS[category] || [];
-  };
+  const [activeStep, setActiveStep] = useState('basic'); // basic, education, services, formats
 
   // Validation
   const isBasicValid = name.trim() && email.trim() && password && confirmPassword && password === confirmPassword;
-  const isEducationValid = educationStandard && educationBoard; // Profile is optional
+  const isEducationValid = educationStandard && educationBoard;
   const isFormValid = isBasicValid && isEducationValid && sugamyaFormatPreferences.length > 0;
+
+  // Toggle service preference
+  const toggleServicePreference = (preference) => {
+    setServicePreferences((prev) => ({
+      ...prev,
+      [preference]: !prev[preference],
+    }));
+  };
 
   // Toggle format preference
   const toggleFormat = (format) => {
@@ -182,14 +96,6 @@ export default function RegisterScreen({ navigation }) {
         ? prev.filter((f) => f !== format)
         : [...prev, format]
     );
-  };
-
-  // Toggle service
-  const toggleService = (service) => {
-    setServices((prev) => ({
-      ...prev,
-      [service]: !prev[service],
-    }));
   };
 
   // Register user
@@ -210,10 +116,10 @@ export default function RegisterScreen({ navigation }) {
         educationStandard,
         educationBoard,
         services,
+        servicePreferences,
         sugamyaFormatPreferences,
         sugamyaUsername,
         sugamyaPassword,
-        nalpProfile: nalpProfileValue ? { [getProfileCategoryForStandard()]: nalpProfileValue } : {}, // Include profile if selected
       };
 
       console.log('[REGISTER-SCREEN] Registering with payload:', payload);
@@ -233,11 +139,22 @@ export default function RegisterScreen({ navigation }) {
         return;
       }
 
-      // Registration successful - save to AuthContext
+      // Registration successful
       console.log('[REGISTER-SCREEN] Registration successful for user:', data.user.userId);
+      console.log('[REGISTER-SCREEN] Service Preferences:', data.user.servicePreferences);
 
+      // Save to AuthContext (stores full user object)
       const result = await register(data.user);
       if (result.success) {
+        // Dispatch service preferences to Redux (for global config access)
+        dispatch(
+          dispatchSetServicePreferences(
+            data.user.servicePreferences || servicePreferences
+          )
+        );
+
+        console.log('[REGISTER-SCREEN] User registered and Redux store updated');
+
         Alert.alert(
           'Registration Successful',
           `Welcome ${data.user.name}!`,
@@ -257,6 +174,14 @@ export default function RegisterScreen({ navigation }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Toggle service (legacy)
+  const toggleService = (service) => {
+    setServices((prev) => ({
+      ...prev,
+      [service]: !prev[service],
+    }));
   };
 
   return (
@@ -283,21 +208,16 @@ export default function RegisterScreen({ navigation }) {
             <Text style={styles.stepText}>Education</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.step, activeStep === 'sugamya' && styles.stepActive]}
-            onPress={() => isEducationValid && setActiveStep('sugamya')}
-            disabled={!isEducationValid}
-          >
-            <Text style={styles.stepText}>Sugamya</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
             style={[styles.step, activeStep === 'services' && styles.stepActive]}
-            onPress={() => setActiveStep('services')}
+            onPress={() => isEducationValid && setActiveStep('services')}
+            disabled={!isEducationValid}
           >
             <Text style={styles.stepText}>Services</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.step, activeStep === 'formats' && styles.stepActive]}
-            onPress={() => setActiveStep('formats')}
+            onPress={() => isEducationValid && setActiveStep('formats')}
+            disabled={!isEducationValid}
           >
             <Text style={styles.stepText}>Formats</Text>
           </TouchableOpacity>
@@ -386,7 +306,7 @@ export default function RegisterScreen({ navigation }) {
           </View>
         )}
 
-        {/* Education Information + Student Profile */}
+        {/* Education Information */}
         {activeStep === 'education' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>📚 Education Details</Text>
@@ -402,7 +322,6 @@ export default function RegisterScreen({ navigation }) {
                   ]}
                   onPress={() => {
                     setEducationStandard(std);
-                    setNalpProfileValue(null); // Reset profile when standard changes
                   }}
                 >
                   <Text
@@ -442,129 +361,112 @@ export default function RegisterScreen({ navigation }) {
               ))}
             </View>
 
-            {/* Conditional Student Profile Selection */}
-            {getCurrentProfileOptions().length > 0 && (
-              <>
-                <Text style={styles.label}>🎓 Student Profile (Optional)</Text>
-                <Text style={styles.description}>
-                  Select a profile that matches your situation for personalized recommendations
-                </Text>
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={nalpProfileValue}
-                    onValueChange={(value) => setNalpProfileValue(value)}
-                    style={styles.picker}
-                  >
-                    <Picker.Item label="Select a profile (optional)" value={null} />
-                    {getCurrentProfileOptions().map((option) => (
-                      <Picker.Item key={option} label={option} value={option} />
-                    ))}
-                  </Picker>
-                </View>
-              </>
-            )}
-
             <PrimaryButton
-              title="Continue to Sugamya"
-              onPress={() => setActiveStep('sugamya')}
+              title="Continue to Services"
+              onPress={() => setActiveStep('services')}
               disabled={!isEducationValid || isLoading}
             />
           </View>
         )}
 
-        {/* Sugamya Credentials */}
-        {activeStep === 'sugamya' && (
+        {/* Service Preferences Selection */}
+        {activeStep === 'services' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sugamya Pustakalaya Credentials</Text>
+            <Text style={styles.sectionTitle}>Select Your Services</Text>
             <Text style={styles.description}>
-              Enter your Sugamya library credentials (optional - defaults will be used)
+              Choose which services you'd like to use. These can be updated anytime.
             </Text>
 
-            <Text style={styles.label}>Sugamya Username</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Sugamya username"
-              value={sugamyaUsername}
-              onChangeText={setSugamyaUsername}
-              editable={!isLoading}
-              placeholderTextColor="#999999"
-            />
+            {/* Recordings Lecture */}
+            <View style={styles.serviceItem}>
+              <View style={styles.serviceContent}>
+                <Text style={styles.serviceIcon}>🎙️</Text>
+                <View style={styles.serviceText}>
+                  <Text style={styles.serviceName}>Record Lectures</Text>
+                  <Text style={styles.serviceDescription}>
+                    Record and transcribe lectures with automatic transcription
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={servicePreferences.recordingsLecture}
+                onValueChange={() => toggleServicePreference('recordingsLecture')}
+                disabled={isLoading}
+              />
+            </View>
 
-            <Text style={styles.label}>Sugamya Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Sugamya password"
-              value={sugamyaPassword}
-              onChangeText={setSugamyaPassword}
-              secureTextEntry
-              editable={!isLoading}
-              placeholderTextColor="#999999"
-            />
+            {/* Capture Books */}
+            <View style={styles.serviceItem}>
+              <View style={styles.serviceContent}>
+                <Text style={styles.serviceIcon}>📚</Text>
+                <View style={styles.serviceText}>
+                  <Text style={styles.serviceName}>Capture & Scan Books</Text>
+                  <Text style={styles.serviceDescription}>
+                    Capture physical book pages and extract text with OCR
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={servicePreferences.captureBooks}
+                onValueChange={() => toggleServicePreference('captureBooks')}
+                disabled={isLoading}
+              />
+            </View>
 
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                💡 Leave blank to use default credentials. You can update these later.
-              </Text>
+            {/* Voice Modality */}
+            <View style={styles.serviceItem}>
+              <View style={styles.serviceContent}>
+                <Text style={styles.serviceIcon}>🎤</Text>
+                <View style={styles.serviceText}>
+                  <Text style={styles.serviceName}>Voice Modality</Text>
+                  <Text style={styles.serviceDescription}>
+                    Use voice commands and get audio responses
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={servicePreferences.voiceModality}
+                onValueChange={() => toggleServicePreference('voiceModality')}
+                disabled={isLoading}
+              />
             </View>
 
             <PrimaryButton
-              title="Continue to Services"
-              onPress={() => setActiveStep('services')}
-              disabled={isLoading}
-            />
-          </View>
-        )}
-
-        {/* Services Selection */}
-        {activeStep === 'services' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Select Services</Text>
-            <Text style={styles.description}>
-              Choose the accessibility features you want to use
-            </Text>
-
-            {Object.keys(services).map((service) => (
-              <View key={service} style={styles.serviceRow}>
-                <View>
-                  <Text style={styles.serviceName}>
-                    {service === 'liveTranscription'
-                      ? '🎙️ Live Transcription'
-                      : service === 'textToSpeech'
-                        ? '🔊 Text to Speech'
-                        : service === 'simplifiedSummaries'
-                          ? '📝 Simplified Summaries'
-                          : '📚 Sugamya Library'}
-                  </Text>
-                  <Text style={styles.serviceDescription}>
-                    {service === 'liveTranscription'
-                      ? 'Convert spoken lectures to text'
-                      : service === 'textToSpeech'
-                        ? 'Listen to content being read aloud'
-                        : service === 'simplifiedSummaries'
-                          ? 'Get simplified study notes'
-                          : 'Access accessible digital books'}
-                  </Text>
-                </View>
-                <Switch
-                  value={services[service]}
-                  onValueChange={() => toggleService(service)}
-                  disabled={service === 'sugamyaLibrary' || isLoading}
-                />
-              </View>
-            ))}
-
-            <PrimaryButton
-              title="Continue to Format Preferences"
+              title="Continue to Formats"
               onPress={() => setActiveStep('formats')}
               disabled={isLoading}
             />
           </View>
         )}
 
-        {/* Format Preferences */}
+        {/* Sugamya Credentials */}
         {activeStep === 'formats' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sugamya Format Preferences *</Text>
+            <Text style={styles.sectionTitle}>Sugamya Library Access (Optional)</Text>
+            <Text style={styles.description}>
+              If you have Sugamya library credentials, enter them here to access the collection
+            </Text>
+
+            <Text style={styles.label}>Sugamya Username</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your Sugamya username"
+              value={sugamyaUsername}
+              onChangeText={setSugamyaUsername}
+              editable={!isLoading}
+            />
+
+            <Text style={styles.label}>Sugamya Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your Sugamya password"
+              value={sugamyaPassword}
+              onChangeText={setSugamyaPassword}
+              secureTextEntry
+              editable={!isLoading}
+            />
+
+            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Sugamya Format Preferences *</Text>
             <Text style={styles.description}>
               Select the book formats you prefer (at least one required)
             </Text>
@@ -838,5 +740,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#ff6666',
     marginBottom: 8,
+  },
+  // Service preference item styles
+  serviceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  serviceContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginRight: 12,
+  },
+  serviceIcon: {
+    fontSize: 32,
+    marginRight: 12,
+    marginTop: 4,
+  },
+  serviceText: {
+    flex: 1,
+  },
+  serviceName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  serviceDescription: {
+    fontSize: 13,
+    color: '#666666',
+    lineHeight: 18,
   },
 });

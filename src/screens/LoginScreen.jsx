@@ -15,13 +15,16 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import { useDispatch } from 'react-redux';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthContext';
+import { setUserConfig } from '../store/slices/configSlice';
 
 const SERVER_BASE_URL = 'http://10.0.2.2:5000';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
+  const dispatch = useDispatch();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -58,11 +61,24 @@ export default function LoginScreen({ navigation }) {
         return;
       }
 
-      // Login successful - save to AuthContext
+      // Login successful - save to AuthContext and Redux
       console.log('[LOGIN-SCREEN] Login successful for user:', data.user.userId);
+      console.log('[LOGIN-SCREEN] Service Preferences:', data.user.servicePreferences);
       
       const result = await login(data.user);
       if (result.success) {
+        // Store user config in Redux, including service preferences
+        dispatch(
+          setUserConfig({
+            servicePreferences: data.user.servicePreferences,
+            language: data.user.language,
+            educationStandard: data.user.educationStandard,
+            educationBoard: data.user.educationBoard,
+          })
+        );
+        
+        console.log('[LOGIN-SCREEN] User config stored in Redux');
+        
         // Navigate to home
         navigation.replace('Home');
       } else {

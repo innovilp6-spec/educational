@@ -1,20 +1,27 @@
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-// import { enableScreens } from 'react-native-screens';
+import { Provider as ReduxProvider } from 'react-redux';
+import { View } from 'react-native';
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/context/AuthContext';
-// enableScreens(true);
+import FloatingSettingsButton from './src/components/FloatingSettingsButton';
+import store from './src/store';
 
 const Stack = createNativeStackNavigator();
 
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <AppNavigator />
-      </NavigationContainer>
-    </AuthProvider>
+    <ReduxProvider store={store}>
+      <AuthProvider>
+        <NavigationContainer>
+          <View style={{ flex: 1 }}>
+            <AppNavigator />
+            <FloatingSettingsButton />
+          </View>
+        </NavigationContainer>
+      </AuthProvider>
+    </ReduxProvider>
   );
 }
