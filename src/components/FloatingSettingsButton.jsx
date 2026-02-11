@@ -14,8 +14,11 @@ import {
   Switch,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useConfig } from '../hooks/useConfig';
+import { useAuth } from '../context/AuthContext';
 import PrimaryButton from './PrimaryButton';
 
 export default function FloatingSettingsButton() {
@@ -26,13 +29,29 @@ export default function FloatingSettingsButton() {
     hasRecordingsLecture,
     hasCaptureBooks,
     hasVoiceModality,
+    isLoading,
+    error,
   } = useConfig();
+  const { getUserEmail } = useAuth();
 
-  const toggleServicePreference = (preference) => {
-    updateServicePreference(
-      preference,
-      !servicePreferences[preference]
-    );
+  const toggleServicePreference = async (preference) => {
+    try {
+      const userEmail = getUserEmail();
+      if (!userEmail) {
+        Alert.alert('Error', 'Unable to identify user. Please log in again.');
+        return;
+      }
+
+      await updateServicePreference(
+        userEmail,
+        preference,
+        !servicePreferences[preference],
+        servicePreferences
+      );
+    } catch (err) {
+      console.error('[FloatingSettingsButton] Error updating preference:', err);
+      Alert.alert('Error', 'Failed to update preference. Please try again.');
+    }
   };
 
   return (
@@ -42,6 +61,7 @@ export default function FloatingSettingsButton() {
         style={styles.floatingButton}
         onPress={() => setSettingsVisible(true)}
         activeOpacity={0.7}
+        disabled={isLoading}
       >
         <Text style={styles.buttonIcon}>⚙️</Text>
       </TouchableOpacity>
@@ -56,10 +76,19 @@ export default function FloatingSettingsButton() {
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Service Preferences</Text>
-            <TouchableOpacity onPress={() => setSettingsVisible(false)}>
+            <TouchableOpacity
+              onPress={() => setSettingsVisible(false)}
+              disabled={isLoading}
+            >
               <Text style={styles.closeButton}>✕</Text>
             </TouchableOpacity>
           </View>
+
+          {error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>⚠️ {error}</Text>
+            </View>
+          )}
 
           <ScrollView style={styles.modalContent}>
             <Text style={styles.description}>
@@ -77,12 +106,18 @@ export default function FloatingSettingsButton() {
                   </Text>
                 </View>
               </View>
-              <Switch
-                value={servicePreferences.recordingsLecture}
-                onValueChange={() => toggleServicePreference('recordingsLecture')}
-                trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
-                thumbColor={servicePreferences.recordingsLecture ? '#4caf50' : '#f1f1f1'}
-              />
+              <View style={styles.switchContainer}>
+                {isLoading && (
+                  <ActivityIndicator size="small" color="#4caf50" style={styles.loader} />
+                )}
+                <Switch
+                  value={servicePreferences.recordingsLecture}
+                  onValueChange={() => toggleServicePreference('recordingsLecture')}
+                  trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
+                  thumbColor={servicePreferences.recordingsLecture ? '#4caf50' : '#f1f1f1'}
+                  disabled={isLoading}
+                />
+              </View>
             </View>
 
             {/* Capture Books */}
@@ -96,12 +131,18 @@ export default function FloatingSettingsButton() {
                   </Text>
                 </View>
               </View>
-              <Switch
-                value={servicePreferences.captureBooks}
-                onValueChange={() => toggleServicePreference('captureBooks')}
-                trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
-                thumbColor={servicePreferences.captureBooks ? '#4caf50' : '#f1f1f1'}
-              />
+              <View style={styles.switchContainer}>
+                {isLoading && (
+                  <ActivityIndicator size="small" color="#4caf50" style={styles.loader} />
+                )}
+                <Switch
+                  value={servicePreferences.captureBooks}
+                  onValueChange={() => toggleServicePreference('captureBooks')}
+                  trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
+                  thumbColor={servicePreferences.captureBooks ? '#4caf50' : '#f1f1f1'}
+                  disabled={isLoading}
+                />
+              </View>
             </View>
 
             {/* Voice Modality */}
@@ -115,12 +156,18 @@ export default function FloatingSettingsButton() {
                   </Text>
                 </View>
               </View>
-              <Switch
-                value={servicePreferences.voiceModality}
-                onValueChange={() => toggleServicePreference('voiceModality')}
-                trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
-                thumbColor={servicePreferences.voiceModality ? '#4caf50' : '#f1f1f1'}
-              />
+              <View style={styles.switchContainer}>
+                {isLoading && (
+                  <ActivityIndicator size="small" color="#4caf50" style={styles.loader} />
+                )}
+                <Switch
+                  value={servicePreferences.voiceModality}
+                  onValueChange={() => toggleServicePreference('voiceModality')}
+                  trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
+                  thumbColor={servicePreferences.voiceModality ? '#4caf50' : '#f1f1f1'}
+                  disabled={isLoading}
+                />
+              </View>
             </View>
 
             {/* Info Box */}
@@ -135,8 +182,9 @@ export default function FloatingSettingsButton() {
           {/* Close Button */}
           <View style={styles.modalFooter}>
             <PrimaryButton
-              title="Done"
+              title={isLoading ? 'Saving...' : 'Done'}
               onPress={() => setSettingsVisible(false)}
+              disabled={isLoading}
             />
           </View>
         </SafeAreaView>
@@ -148,15 +196,15 @@ export default function FloatingSettingsButton() {
 const styles = StyleSheet.create({
   floatingButton: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 56,
-    height: 56,
+    top: 14,
+    left: 16,
+    width: 40,
+    height: 40,
     borderRadius: 28,
-    backgroundColor: '#000000',
+    // backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    // shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -189,6 +237,17 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#666666',
     fontWeight: '600',
+  },
+  errorBox: {
+    backgroundColor: '#ffebee',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffcdd2',
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#c62828',
   },
   modalContent: {
     flex: 1,
@@ -241,6 +300,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666666',
     lineHeight: 18,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loader: {
+    marginRight: 8,
   },
   infoBox: {
     backgroundColor: '#f0f0f0',

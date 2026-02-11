@@ -1,10 +1,46 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import apiService from '../../services/apiService';
 
 /**
  * Config Slice
  * Manages application configuration including user service preferences
  * Preferences determine which features are available to the user
  */
+
+/**
+ * Async thunk to update service preferences on backend
+ * Syncs preference changes with the server database
+ * Redux state is the single source of truth, updated only after backend confirms
+ */
+export const updateServicePreferenceAsync = createAsyncThunk(
+  'config/updateServicePreferenceAsync',
+  async ({ userEmail, preference, value, currentPreferences }, { rejectWithValue }) => {
+    try {
+      // Build updated preferences object
+      const updatedPreferences = {
+        ...currentPreferences,
+        [preference]: value,
+      };
+
+      // Call backend API to persist the change
+      const response = await apiService.updateServicePreferences(
+        userEmail,
+        updatedPreferences
+      );
+
+      console.log('[CONFIG-SLICE] Preferences synced with backend:', response);
+
+      return {
+        preference,
+        value,
+        preferences: updatedPreferences,
+      };
+    } catch (error) {
+      console.error('[CONFIG-SLICE] Error updating preferences:', error);
+      return rejectWithValue(error.message || 'Failed to update preferences');
+    }
+  }
+);
 
 const initialState = {
   servicePreferences: {
@@ -33,10 +69,11 @@ const configSlice = createSlice({
         voiceModality: action.payload.voiceModality || false,
       };
       state.error = null;
+      state.isLoading = false;
     },
 
     /**
-     * Update individual service preference
+     * Update individual service preference (local only, use async for backend)
      */
     updateServicePreference: (state, action) => {
       const { preference, value } = action.payload;
@@ -70,6 +107,7 @@ const configSlice = createSlice({
       if (educationStandard) state.educationStandard = educationStandard;
       if (educationBoard) state.educationBoard = educationBoard;
       state.error = null;
+      state.isLoading = false;
     },
 
     /**
@@ -97,6 +135,24 @@ const configSlice = createSlice({
       state.isLoading = false;
       state.error = null;
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      // Handle updateServicePreferenceAsync
+      .addCase(updateServicePreferenceAsync.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateServicePreferenceAsync.fulfilled, (state, action) => {
+        const { preference, value } = action.payload;
+        state.servicePreferences[preference] = value;
+        state.isLoading = false;
+        state.error = null;
+      })
+      .addCase(updateServicePreferenceAsync.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload || 'Failed to update preferences';
+      });
   },
 });
 

@@ -13,10 +13,13 @@ import {
 } from 'react-native';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
 import { QuizMessageBubble, QuizResultsBubble } from '../components/QuizMessageBubble';
+import { useConfig } from '../hooks/useConfig';
+import FloatingActionMenu from '../components/FloatingActionMenu';
 
 export default function AgenticCoachScreen({ route, navigation }) {
     const { transcriptId, sessionName, transcript, contextType } = route.params || {};
-
+    const { servicePreferences } = useConfig();
+    console.log('services preferences in AgenticCoachScreen:', servicePreferences);
     // Ensure we have valid values
     const validTranscriptId = transcriptId || null;
     const validContextType = contextType || 'general';
@@ -340,16 +343,21 @@ export default function AgenticCoachScreen({ route, navigation }) {
         >
             {/* Header */}
             <View style={styles.header}>
-                <View>
-                    <Text style={styles.headerTitle}>Agentic Coach</Text>
-                    <Text style={styles.headerSubtitle}>{sessionName}</Text>
+                <View style={{ width: "35%" }}>
+
                 </View>
-                <TouchableOpacity
-                    onPress={clearConversation}
-                    style={styles.clearButton}
-                >
-                    <Text style={styles.clearButtonText}>Clear</Text>
-                </TouchableOpacity>
+                <View style={{ width: "65%", justifyContent: "space-between", flexDirection: "row", alignItems: "center" }}>
+                    <View>
+                        <Text style={styles.headerTitle}>Your Coach</Text>
+                        <Text style={styles.headerSubtitle}>{sessionName}</Text>
+                    </View>
+                    <TouchableOpacity
+                        onPress={clearConversation}
+                        style={styles.clearButton}
+                    >
+                        <Text style={styles.clearButtonText}>Clear</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {/* Messages */}
@@ -357,7 +365,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
                 <View style={styles.emptyStateContainer}>
                     <Text style={styles.emptyStateTitle}>Start Learning!</Text>
                     <Text style={styles.emptyStateText}>
-                        Ask the coach any questions about the lecture. The coach will provide context-aware responses.
+                        Ask the coach any questions about the lecture. The coach will provide context-aware responses. You can also switch between contexts.
                     </Text>
                 </View>
             ) : (
@@ -398,6 +406,34 @@ export default function AgenticCoachScreen({ route, navigation }) {
 
             {/* Input Section */}
             <View style={styles.inputContainer}>
+                {/* Floating Action Menu */}
+                <FloatingActionMenu
+                    key={`fab-${servicePreferences.recordingsLecture}-${servicePreferences.captureBooks}-${servicePreferences.voiceModality}`}
+                    actions={[
+                        servicePreferences.recordingsLecture && {
+                            icon: '🎙️',
+                            label: 'Lecture',
+                            onPress: () => navigation.navigate('LectureCapture'),
+                        },
+                        {
+                            icon: '📝',
+                            label: 'Notes',
+                            onPress: () => navigation.navigate('Notes'),
+                        },
+                        servicePreferences.captureBooks && {
+                            icon: '📷',
+                            label: 'Capture',
+                            onPress: () => navigation.navigate('BookCamera'),
+                        },
+                        {
+                            icon: '📚',
+                            label: 'Sugamya',
+                            onPress: () => navigation.navigate('Sugamya'),
+                        },
+                    ].filter(Boolean)}
+                />
+
+                {/* Text Input */}
                 <TextInput
                     style={styles.textInput}
                     placeholder="Ask a question..."
@@ -408,21 +444,34 @@ export default function AgenticCoachScreen({ route, navigation }) {
                     multiline
                     maxLength={500}
                 />
-                <TouchableOpacity
-                    onPress={sendMessage}
-                    disabled={isLoading || !userInput.trim()}
-                    style={[
-                        styles.sendButton,
-                        (isLoading || !userInput.trim()) && styles.sendButtonDisabled,
-                    ]}
-                >
-                    {isLoading ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                        <Text style={styles.sendButtonText}>Send</Text>
-                    )}
-                </TouchableOpacity>
+
+                {/* Send Button or Mic Button */}
+                {userInput.trim() ? (
+                    <TouchableOpacity
+                        onPress={sendMessage}
+                        disabled={isLoading}
+                        style={[
+                            styles.sendButton,
+                            isLoading && styles.sendButtonDisabled,
+                        ]}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                            <Text style={styles.sendButtonText}>⬆</Text>
+                        )}
+                    </TouchableOpacity>
+                ) : (
+                    <TouchableOpacity
+                        style={styles.micButton}
+                        disabled={isLoading}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.micButtonIcon}>🎤</Text>
+                    </TouchableOpacity>
+                )}
             </View>
+
         </KeyboardAvoidingView>
     );
 }
@@ -444,6 +493,7 @@ const styles = StyleSheet.create({
         color: '#666',
     },
     header: {
+        textAlign: 'center',
         backgroundColor: '#fff',
         paddingHorizontal: 16,
         paddingVertical: 12,
@@ -455,8 +505,10 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
+        textAlign: 'center',
         fontWeight: 'bold',
         color: '#333',
+
     },
     headerSubtitle: {
         fontSize: 12,
@@ -601,11 +653,12 @@ const styles = StyleSheet.create({
     sendButton: {
         backgroundColor: '#000',
         borderRadius: 8,
-        paddingHorizontal: 16,
+        paddingHorizontal: 12,
         paddingVertical: 10,
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: 40,
+        minWidth: 40,
     },
     sendButtonDisabled: {
         backgroundColor: '#ccc',
@@ -613,7 +666,18 @@ const styles = StyleSheet.create({
     },
     sendButtonText: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: 18,
         fontWeight: '600',
+    },
+    micButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 8,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    micButtonIcon: {
+        fontSize: 20,
     },
 });

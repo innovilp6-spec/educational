@@ -4,6 +4,7 @@ import {
   updateServicePreference,
   setUserConfig,
   resetConfig,
+  updateServicePreferenceAsync,
 } from '../store/slices/configSlice';
 
 /**
@@ -31,8 +32,8 @@ export const useConfig = () => {
     // Action dispatchers
     setServicePreferences: (prefs) =>
       dispatch(setServicePreferences(prefs)),
-    updateServicePreference: (preference, value) =>
-      dispatch(updateServicePreference({ preference, value })),
+    updateServicePreference: (userEmail, preference, value, currentPreferences) =>
+      dispatch(updateServicePreferenceAsync({ userEmail, preference, value, currentPreferences })),
     setUserConfig: (configData) =>
       dispatch(setUserConfig(configData)),
     resetConfig: () => dispatch(resetConfig()),

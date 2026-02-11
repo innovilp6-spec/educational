@@ -28,6 +28,7 @@ const Stack = createNativeStackNavigator();
 export default function AppNavigator() {
     return (
         <Stack.Navigator
+            initialRouteName="Login"
             screenOptions={{
                 headerShown: false,
             }}
@@ -39,7 +40,11 @@ export default function AppNavigator() {
             {/* App Screens */}
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="LectureCapture" component={LectureCaptureScreen} />
-            <Stack.Screen name="DebugTranscribe" component={DebugTranscribeScreen} options={{ title: 'Debug: Transcription' }} />
+            <Stack.Screen
+                name="DebugTranscribe"
+                component={DebugTranscribeScreen}
+                options={{ title: 'Debug: Transcription' }}
+            />
             <Stack.Screen name="StudyLibrary" component={StudyLibraryScreen} />
             <Stack.Screen name="BookReading" component={BookReadingScreen} />
             <Stack.Screen name="Sugamya" component={SugamyaLibraryScreen} />
@@ -50,55 +55,49 @@ export default function AppNavigator() {
             <Stack.Screen name="NameSession" component={NameSessionScreen} />
             <Stack.Screen name="TranscriptViewer" component={TranscriptViewerScreen} />
             <Stack.Screen name="RecordingsList" component={RecordingsListScreen} />
+
             <Stack.Screen
                 name="AgenticCoach"
                 component={AgenticCoachScreen}
-                options={{
-                    title: 'Study with Coach',
-                }}
+                options={{ title: 'Study with Coach' }}
             />
+
             <Stack.Screen
                 name="GeneralCoach"
                 component={GeneralCoachScreen}
-                options={{
-                    title: 'Coach',
-                }}
+                options={{ title: 'Coach' }}
             />
+
             <Stack.Screen
                 name="Notes"
                 component={AgenticNotesScreen}
-                options={{
-                    title: 'Agentic Notes',
-                }}
+                options={{ title: 'Agentic Notes' }}
             />
+
             <Stack.Screen
                 name="CapturedBooksLibrary"
                 component={CapturedBooksLibraryScreen}
-                options={{
-                    title: 'My Captured Books',
-                }}
+                options={{ title: 'My Captured Books' }}
             />
+
             <Stack.Screen
                 name="BookCamera"
                 component={BookCameraScreen}
-                options={{
-                    title: 'Capture Book Pages',
-                }}
+                options={{ title: 'Capture Book Pages' }}
             />
+
             <Stack.Screen
                 name="BookProcessing"
                 component={BookProcessingScreen}
-                options={{
-                    title: 'Processing Book',
-                }}
+                options={{ title: 'Processing Book' }}
             />
+
             <Stack.Screen
                 name="BookDetail"
                 component={BookDetailScreen}
-                options={{
-                    title: 'Read Book',
-                }}
+                options={{ title: 'Read Book' }}
             />
         </Stack.Navigator>
     );
 }
+

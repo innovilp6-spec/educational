@@ -80,7 +80,7 @@ export default function LoginScreen({ navigation }) {
         console.log('[LOGIN-SCREEN] User config stored in Redux');
         
         // Navigate to home
-        navigation.replace('Home');
+        navigation.replace('AgenticCoach');
       } else {
         Alert.alert('Error', 'Failed to save session. Please try again.');
       }
