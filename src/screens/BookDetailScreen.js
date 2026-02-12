@@ -11,7 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@react-native-vector-icons/fontawesome';
 import useBookReader from '../hooks/useBookReader';
-import PrimaryButton from '../components/PrimaryButton';
+import FloatingActionMenu from '../components/FloatingActionMenu';
 import { useAuth } from '../context/AuthContext';
 
 const API_BASE = 'http://10.0.2.2:5000/api';
@@ -274,16 +274,21 @@ const BookDetailScreen = ({ route, navigation }) => {
                 </View>
             </ScrollView>
 
-            {/* Study Coach Button */}
-            <View style={styles.coachButtonContainer}>
-                <PrimaryButton 
-                    title="Study with Coach" 
-                    onPress={() => navigation.navigate('AgenticCoach', {
-                        transcriptId: bookId,
-                        sessionName: book.title,
-                        contextType: 'book',
-                        transcript: book.fullText || currentParagraphText,
-                    })}
+            {/* Floating Action Menu */}
+            <View style={styles.fabContainer}>
+                <FloatingActionMenu
+                    actions={[
+                        {
+                            icon: '🧠',
+                            label: 'Coach',
+                            onPress: () => navigation.navigate('AgenticCoach', {
+                                transcriptId: bookId,
+                                sessionName: book.title,
+                                contextType: 'book',
+                                transcript: book.fullText || currentParagraphText,
+                            }),
+                        },
+                    ]}
                 />
             </View>
 
@@ -437,12 +442,10 @@ const styles = StyleSheet.create({
         color: '#333',
         textAlign: 'justify',
     },
-    coachButtonContainer: {
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        backgroundColor: '#f9f9f9',
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
+    fabContainer: {
+        position: 'absolute',
+        bottom: 100,
+        right: 35,
     },
     sentence: {
         color: '#333',

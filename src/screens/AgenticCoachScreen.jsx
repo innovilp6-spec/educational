@@ -62,6 +62,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
 
     // Scroll reference
     const scrollViewRef = useRef(null);
+    const loadAbortController = useRef(null);
 
     // Load conversation history on mount and when context ID changes
     useFocusEffect(useCallback(() => {
@@ -72,7 +73,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
         } else {
             console.log('[EFFECT] Skipping loadCoachHistory - missing required state values');
         }
-    }, [loadCoachHistory]));  // Depend on memoized function which depends on state
+    }, [loadCoachHistory, currentContextId, currentContext]));  // Include state deps to catch updates
 
     // Update state when route params change (e.g., navigating from one lecture to another)
     useFocusEffect(useCallback(() => {
@@ -86,23 +87,26 @@ export default function AgenticCoachScreen({ route, navigation }) {
             });
 
             // Update state to match new route params
-            // This will trigger the loadCoachHistory effect above
             setCurrentContext(contextType || 'general');
             setCurrentContextId(transcriptId);
             setCurrentContextName(sessionName);
             setMessages([]); // Clear messages for fresh load
             setCurrentInteractionId(null);
+
+            // Load history immediately after state update to avoid race condition
+            console.log('[ROUTE-EFFECT] Preparing to load history for new context:', { newContextId: transcriptId, newContextType: contextType });
+            // Note: loadCoachHistory will use the updated state via useCallback dependency tracking
         } else {
             console.log('[ROUTE-EFFECT] No route param change detected, skipping update');
         }
-    }, [transcriptId, contextType])); // Watch for route param changes
+    }, [transcriptId, contextType, currentContextId])); // Include currentContextId to detect changes
 
     // Auto-scroll to bottom when messages update
-    useEffect(() => {
+    useFocusEffect(useCallback(() => {
         if (scrollViewRef.current && messages.length > 0) {
             scrollViewRef.current.scrollToEnd({ animated: true });
         }
-    }, [messages]);
+    }, [messages]));
 
     // Log currentContextName whenever it changes
     useFocusEffect(useCallback(() => {
@@ -111,6 +115,16 @@ export default function AgenticCoachScreen({ route, navigation }) {
 
     const loadCoachHistory = useCallback(async () => {
         try {
+            // Cancel any previous request
+            if (loadAbortController.current) {
+                console.log('[loadCoachHistory] Cancelling previous request');
+                loadAbortController.current.abort();
+            }
+
+            // Create new abort controller for this request
+            loadAbortController.current = new AbortController();
+            const currentAbortSignal = loadAbortController.current.signal;
+
             setIsLoadingHistory(true);
             console.log('[loadCoachHistory] Starting load...');
             console.log('[loadCoachHistory] currentContextId:', currentContextId);
@@ -120,7 +134,13 @@ export default function AgenticCoachScreen({ route, navigation }) {
             console.log('[loadCoachHistory] currentContextId === undefined:', currentContextId === undefined);
             console.log('Loading coach conversation history for context:', { currentContextId, currentContext });
 
-            const history = await getCoachHistory(currentContextId, currentContext);
+            const history = await getCoachHistory(currentContextId, currentContext, currentAbortSignal);
+
+            // Check if this request was aborted before updating state
+            if (currentAbortSignal.aborted) {
+                console.log('[loadCoachHistory] Request was aborted, ignoring response');
+                return;
+            }
 
             // Convert history to message format
             if (history && history.length > 0) {
@@ -158,7 +178,12 @@ export default function AgenticCoachScreen({ route, navigation }) {
                 }
             }
         } catch (err) {
-            console.error('Error loading coach history:', err);
+            // Ignore abort errors - they're expected when switching contexts
+            if (err.name === 'AbortError') {
+                console.log('[loadCoachHistory] Request aborted (expected on context switch)');
+            } else {
+                console.error('Error loading coach history:', err);
+            }
             // Don't alert on initial load failure - start fresh
         } finally {
             setIsLoadingHistory(false);
@@ -676,7 +701,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
                         servicePreferences.captureBooks && {
                             icon: '📷',
                             label: 'Capture',
-                            onPress: () => navigation.navigate('BookCamera'),
+                            onPress: () => navigation.navigate('CapturedBooksLibrary'),
                         },
                         {
                             icon: '📚',

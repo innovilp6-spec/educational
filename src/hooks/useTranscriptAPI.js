@@ -15,7 +15,7 @@ export default function useTranscriptAPI() {
     const USER_EMAIL = getUserEmail();
 
     // Helper function to make API calls to the server
-    const makeServerRequest = async (endpoint, method = "POST", body = null) => {
+    const makeServerRequest = async (endpoint, method = "POST", body = null, abortSignal = null) => {
         try {
             const options = {
                 method,
@@ -24,6 +24,10 @@ export default function useTranscriptAPI() {
                     "x-user-email": USER_EMAIL,
                 },
             };
+
+            if (abortSignal) {
+                options.signal = abortSignal;
+            }
 
             if (body) {
                 options.body = JSON.stringify(body);
@@ -306,7 +310,7 @@ export default function useTranscriptAPI() {
     };
 
     // Get coach interaction history
-    const getCoachHistory = async (contextId = null, contextType = null) => {
+    const getCoachHistory = async (contextId = null, contextType = null, abortSignal = null) => {
         try {
             console.log("[Hook getCoachHistory] Called with:", { contextId, contextType });
             console.log("[Hook getCoachHistory] contextId is null?", contextId === null);
@@ -328,14 +332,14 @@ export default function useTranscriptAPI() {
 
             const queryString = params.toString() ? `?${params.toString()}` : '';
             console.log("[Hook getCoachHistory] Final query string:", queryString);
-            
-            const response = await makeServerRequest(`/api/coach/agentic/history${queryString}`, "GET");
+
+            const response = await makeServerRequest(`/api/coach/agentic/history${queryString}`, "GET", null, abortSignal);
 
             console.log("Coach history retrieved:", response);
             return response.interactions || [];
         } catch (err) {
             console.error("Error getting coach history:", err);
-            return [];
+            throw err;  // Propagate error so component can handle abort
         }
     };
 
