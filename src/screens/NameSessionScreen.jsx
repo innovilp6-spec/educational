@@ -1,18 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import RNFS from 'react-native-fs';
 import PrimaryButton from '../components/PrimaryButton';
 import InfoButton from '../components/InfoButton';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import { useConfig } from '../hooks/useConfig';
 import { NAMING_NOMENCLATURE, DETAILED_GUIDELINES, validateName } from '../utils/namingNomenclature';
 
 export default function NameSessionScreen({ navigation, route }) {
-  const { transcript } = route.params;
+  const { masterTranscript } = route.params;
   const [name, setName] = useState('');
+  const [standard, setStandard] = useState('');
+  const [chapter, setChapter] = useState('');
+  const [subject, setSubject] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { createTranscript } = useTranscriptAPI();
+  const { educationStandard } = useConfig();
   const nomenclature = NAMING_NOMENCLATURE.lecture;
   const guidelines = DETAILED_GUIDELINES.lecture;
+
+  // Initialize standard from user profile
+  useEffect(() => {
+    if (educationStandard) {
+      setStandard(String(educationStandard));
+      console.log('[NameSessionScreen] Standard pre-filled from profile:', educationStandard);
+    }
+  }, [educationStandard]);
+
+  // Debug log
+  console.log('[NameSessionScreen] Received params:', route.params);
+  console.log('[NameSessionScreen] Transcript length:', masterTranscript?.length || 0);
+  console.log('[NameSessionScreen] Transcript preview:', masterTranscript?.substring(0, 100) || 'EMPTY');
+  console.log('[NameSessionScreen] User standard from profile:', educationStandard);
 
   const handleSave = async () => {
     // Validate name
@@ -22,21 +41,40 @@ export default function NameSessionScreen({ navigation, route }) {
       return;
     }
 
+    // Validate required fields
+    if (!chapter.trim()) {
+      Alert.alert('Required', 'Please enter a chapter/topic');
+      return;
+    }
+
+    if (!subject.trim()) {
+      Alert.alert('Required', 'Please enter a subject');
+      return;
+    }
+
     const sessionName = name || `Lecture_${new Date().toDateString()}`;
 
     try {
       setIsLoading(true);
 
-      console.log('Creating transcript on server...');
+      console.log('[NameSessionScreen] Creating transcript on server...');
+      console.log('[NameSessionScreen] Sending data:', {
+        transcriptLength: masterTranscript?.length,
+        standard,
+        chapter,
+        topic: sessionName,
+        subject,
+        sessionName,
+      });
 
       // Create transcript on server to get transcriptId
       const response = await createTranscript(
-        transcript,
-        '10',              // standard (valid enum: 6, 7, 8, 9, 10, 11, 12)
-        'Chapter 1',       // chapter
-        sessionName,       // topic
-        'General',         // subject
-        sessionName        // sessionName (required field)
+        masterTranscript,
+        standard,
+        chapter,
+        sessionName,
+        subject,
+        sessionName
       );
 
       const transcriptId = response._id || response.transcriptId || response.transcript?.transcriptId;
@@ -50,7 +88,7 @@ export default function NameSessionScreen({ navigation, route }) {
       // Save transcriptId and transcript to local files for later retrieval
       try {
         const sessionFolder = `${RNFS.DocumentDirectoryPath}/${sessionName.replace(/\s+/g, '_')}`;
-        
+
         // Create session folder if it doesn't exist
         const exists = await RNFS.exists(sessionFolder);
         if (!exists) {
@@ -58,16 +96,16 @@ export default function NameSessionScreen({ navigation, route }) {
         }
 
         // Save transcript content
-        await RNFS.writeFile(`${sessionFolder}/transcript.txt`, transcript, 'utf8');
+        await RNFS.writeFile(`${sessionFolder}/transcript.txt`, masterTranscript, 'utf8');
 
         // Save metadata (including transcriptId for later use)
         const metadata = {
           transcriptId,
           sessionName,
           createdAt: new Date().toISOString(),
-          standard: '10',
-          chapter: 'Chapter 1',
-          subject: 'General',
+          standard,
+          chapter,
+          subject,
         };
         await RNFS.writeFile(`${sessionFolder}/metadata.json`, JSON.stringify(metadata, null, 2), 'utf8');
 
@@ -80,7 +118,7 @@ export default function NameSessionScreen({ navigation, route }) {
       // Navigate to the Transcript Viewer screen with the session name, transcript, and transcriptId
       navigation.replace('TranscriptViewer', {
         sessionName,
-        transcript,
+        transcript: masterTranscript,
         transcriptId,
       });
     } catch (error) {
@@ -96,6 +134,8 @@ export default function NameSessionScreen({ navigation, route }) {
       <View style={styles.innerContainer}>
         <View style={styles.titleSection}>
           <Text style={styles.title}>Name this lecture</Text>
+        </View>
+        <View style={styles.infobuttonContainer}>
           <InfoButton
             title={guidelines.title}
             rules={guidelines.rules}
@@ -147,6 +187,45 @@ export default function NameSessionScreen({ navigation, route }) {
           <Text style={styles.charCount}>{name.length}/100 characters</Text>
         )}
 
+        {/* Subject Field */}
+        <Text style={styles.inputLabel}>Subject:</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., Mathematics, Science, English"
+          placeholderTextColor="#bbb"
+          value={subject}
+          onChangeText={setSubject}
+          editable={!isLoading}
+          maxLength={50}
+        />
+
+        {/* Chapter/Topic Field */}
+        <Text style={styles.inputLabel}>Chapter/Topic:</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., Chapter 5, Data Types, Algebra Basics"
+          placeholderTextColor="#bbb"
+          value={chapter}
+          onChangeText={setChapter}
+          editable={!isLoading}
+          maxLength={100}
+        />
+
+        {/* Standard/Grade Field */}
+        <Text style={styles.inputLabel}>Standard/Grade:</Text>
+        <TextInput
+          readOnly
+          style={styles.input}
+          placeholder="e.g., 10 (for Grade 10/Class 10)"
+          placeholderTextColor="#bbb"
+          value={standard}
+          onChangeText={setStandard}
+          editable={!isLoading}
+          maxLength={2}
+          keyboardType="numeric"
+        />
+        <Text style={styles.helpText}>Valid values: 6, 7, 8, 9, 10, 11, 12</Text>
+
         {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#007AFF" />
@@ -174,16 +253,18 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   titleSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    marginBottom: 12,
     alignItems: 'center',
+  },
+  infobuttonContainer: {
     marginBottom: 20,
+    alignItems: 'center',
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
     color: '#333',
-    flex: 1,
+    textAlign: 'center',
   },
 
   // Pattern Card
@@ -266,12 +347,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 8,
+    marginTop: 12,
   },
   input: {
     borderWidth: 1.5,
     borderColor: '#007AFF',
     padding: 14,
-    marginBottom: 8,
+    marginBottom: 4,
     borderRadius: 8,
     fontSize: 14,
     color: '#333',
@@ -282,6 +364,12 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'right',
     marginBottom: 16,
+  },
+  helpText: {
+    fontSize: 11,
+    color: '#999',
+    marginBottom: 12,
+    fontStyle: 'italic',
   },
 
   // Loading

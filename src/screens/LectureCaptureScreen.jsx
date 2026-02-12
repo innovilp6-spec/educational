@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Button, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Animated } from 'react-native';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
 import PrimaryButton from '../components/PrimaryButton';
 import RNFS from 'react-native-fs';
@@ -20,9 +20,47 @@ export default function LectureCaptureScreen({ navigation }) {
   const [audioFiles, setAudioFiles] = useState([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
 
+  // Animation refs for pulsing waveform
+  const pulseAnim1 = useRef(new Animated.Value(1)).current;
+  const pulseAnim2 = useRef(new Animated.Value(1)).current;
+  const pulseAnim3 = useRef(new Animated.Value(1)).current;
+
   const intervalRef = useRef(null);
   const isProcessingRef = useRef(false);
   const currentChunkIndexRef = useRef(0);
+  const scrollViewRef = useRef(null);
+
+  // Start pulsing animation when recording starts
+  useEffect(() => {
+    if (isRecording) {
+      startPulseAnimation();
+    } else {
+      pulseAnim1.setValue(1);
+      pulseAnim2.setValue(1);
+      pulseAnim3.setValue(1);
+    }
+  }, [isRecording]);
+
+  const startPulseAnimation = () => {
+    const animationSequence = (anim) => {
+      Animated.sequence([
+        Animated.timing(anim, {
+          toValue: 1.5,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start(() => animationSequence(anim));
+    };
+
+    animationSequence(pulseAnim1);
+    setTimeout(() => animationSequence(pulseAnim2), 200);
+    setTimeout(() => animationSequence(pulseAnim3), 400);
+  };
 
   // Load audio files from Downloads directory
   const loadAudioFiles = async () => {
@@ -181,8 +219,8 @@ export default function LectureCaptureScreen({ navigation }) {
       console.log('[LectureCaptureScreen] Recording stopped. Master transcript ready.');
       console.log('[LectureCaptureScreen] Total chunks processed:', chunkCount);
 
-      // Navigate to Transcribing screen with the master transcript
-      navigation.replace('Transcribing', { masterTranscript });
+      // Navigate to NameSessionScreen first
+      navigation.navigate('NameSession', { transcript: masterTranscript });
     } catch (error) {
       console.error('[LectureCaptureScreen] Error stopping recording:', error);
       Alert.alert('Error', 'Failed to stop recording: ' + error.message);
@@ -202,85 +240,131 @@ export default function LectureCaptureScreen({ navigation }) {
     };
   }, []);
 
+  // Render pulsing waveform bars
+  const WaveformBar = ({ animValue }) => (
+    <Animated.View
+      style={[
+        styles.waveformBar,
+        {
+          transform: [{ scaleY: animValue }],
+        },
+      ]}
+    />
+  );
+
   return (
     <View style={styles.container}>
-      <View style={styles.headerSection}>
-        <Text style={styles.title}>Lecture Recording Simulation</Text>
-        <Text style={styles.subtitle}>Processing audio chunks from ffmpeg_chunks</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Recording Lecture</Text>
+        {!isRecording && (
+          <TouchableOpacity
+            style={styles.viewRecordingsButton}
+            onPress={() => navigation.navigate('RecordingsList')}
+          >
+            <Text style={styles.viewRecordingsButtonText}>📋 View Recordings</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {isLoadingFiles && (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading audio files...</Text>
+          <Text style={styles.loadingText}>Preparing...</Text>
         </View>
       )}
 
       {!isLoadingFiles && audioFiles.length === 0 && !isRecording && (
         <View style={styles.centerContainer}>
           <Text style={styles.errorText}>⚠️ No audio files found</Text>
-          <Text style={styles.errorSubtext}>Please add audio files to ffmpeg_chunks directory</Text>
+          <Text style={styles.errorSubtext}>Please add audio files to Downloads folder</Text>
         </View>
       )}
 
       {audioFiles.length > 0 && (
-        <>
-          <View style={styles.statusSection}>
-            <View style={styles.statusBox}>
-              <Text style={styles.statusLabel}>Files Loaded:</Text>
-              <Text style={styles.statusValue}>{audioFiles.length} audio files</Text>
-            </View>
+        <View style={styles.content}>
+          {/* Recording Status Section */}
+          {isRecording && (
+            <View style={styles.recordingSection}>
+              {/* Pulsing Waveform */}
+              <View style={styles.waveformContainer}>
+                <WaveformBar animValue={pulseAnim1} />
+                <WaveformBar animValue={pulseAnim2} />
+                <WaveformBar animValue={pulseAnim3} />
+              </View>
 
-            <View style={styles.statusBox}>
-              <Text style={styles.statusLabel}>Status:</Text>
-              <Text style={[styles.statusValue, { color: isRecording ? '#ff9800' : '#4caf50' }]}>
-                {!isRecording ? 'Ready' : isProcessingChunk ? 'Processing...' : 'Recording...'}
-              </Text>
-            </View>
+              {/* Status Indicator */}
+              <View style={styles.statusIndicator}>
+                <View style={styles.recordingDot} />
+                <Text style={styles.recordingText}>Recording</Text>
+              </View>
 
-            <View style={styles.statusBox}>
-              <Text style={styles.statusLabel}>Chunks:</Text>
-              <Text style={styles.statusValue}>{chunkCount} processed</Text>
+              {/* Chunk Counter */}
+              <Text style={styles.chunkCounter}>{chunkCount} chunks</Text>
             </View>
-          </View>
+          )}
 
-          <View style={styles.transcriptSection}>
-            <Text style={styles.sectionTitle}>Current Chunk Transcription:</Text>
-            <ScrollView style={styles.transcriptBox}>
+          {/* Live Transcript Box */}
+          <View style={styles.liveTranscriptContainer}>
+            <View style={styles.liveTranscriptHeader}>
+              <Text style={styles.liveTranscriptTitle}>Live Transcript</Text>
               {isProcessingChunk && (
-                <View style={styles.loadingIndicator}>
+                <View style={styles.processingIndicator}>
                   <ActivityIndicator size="small" color="#007AFF" />
-                  <Text style={styles.processingText}>Transcribing...</Text>
                 </View>
               )}
-              <Text style={styles.transcriptText}>
-                {currentChunkTranscript || 'Waiting for transcription...'}
-              </Text>
+            </View>
+
+            <ScrollView
+              style={styles.liveTranscriptBox}
+              ref={scrollViewRef}
+              onContentSizeChange={() => scrollViewRef?.current?.scrollToEnd({ animated: true })}
+            >
+              {currentChunkTranscript ? (
+                <View style={styles.transcriptContent}>
+                  {masterTranscript && (
+                    <Text style={styles.pastTranscript}>{masterTranscript}</Text>
+                  )}
+                  <View style={styles.currentTranscriptHighlight}>
+                    <Text style={styles.currentTranscript}>{currentChunkTranscript}</Text>
+                  </View>
+                </View>
+              ) : (
+                <Text style={styles.placeholderText}>
+                  {isRecording ? 'Listening...' : 'Click record to start'}
+                </Text>
+              )}
             </ScrollView>
           </View>
 
-          <View style={styles.buttonRow}>
+          {/* Control Buttons */}
+          <View style={styles.buttonContainer}>
             {!isRecording && (
-              <PrimaryButton title="Start Simulation" onPress={handleStart} />
+              <PrimaryButton
+                title="Start Recording"
+                onPress={handleStart}
+                style={styles.primaryButton}
+              />
             )}
 
             {isRecording && (
               <PrimaryButton
-                title="Stop & Proceed"
+                title="Stop & Continue"
                 onPress={handleStop}
                 style={styles.stopButton}
               />
             )}
           </View>
 
-          {isRecording && masterTranscript.length > 0 && (
-            <View style={styles.masterTranscriptPreview}>
-              <Text style={styles.previewLabel}>Master Transcript Preview (First 200 chars):</Text>
-              <Text style={styles.previewText}>{masterTranscript.substring(0, 200)}...</Text>
-              <Text style={styles.transcriptLength}>Total length: {masterTranscript.length} characters</Text>
+          {/* Transcript Stats */}
+          {masterTranscript.length > 0 && (
+            <View style={styles.statsContainer}>
+              <Text style={styles.statsText}>
+                {masterTranscript.length} characters • {masterTranscript.split(' ').length} words
+              </Text>
             </View>
           )}
-        </>
+        </View>
       )}
     </View>
   );
@@ -289,26 +373,40 @@ export default function LectureCaptureScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f8f8',
   },
-  headerSection: {
-    marginBottom: 16,
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    alignItems: 'center',
   },
-  title: {
-    fontSize: 22,
+  headerTitle: {
+    fontSize: 24,
     fontWeight: '700',
-    color: '#333',
-    marginBottom: 4,
+    color: '#000',
+    textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 12,
-    color: '#666',
+  viewRecordingsButton: {
+    marginTop: 12,
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  viewRecordingsButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
   centerContainer: {
     flex: 1,
@@ -318,8 +416,9 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
+    fontWeight: '500',
   },
   errorText: {
     fontSize: 18,
@@ -331,100 +430,128 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#999',
   },
-  statusSection: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    gap: 8,
+  recordingSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingVertical: 20,
   },
-  statusBox: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  statusLabel: {
-    fontSize: 11,
-    color: '#666',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  statusValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#007AFF',
-  },
-  transcriptSection: {
-    flex: 1,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
-  },
-  transcriptBox: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-  },
-  transcriptText: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: '#333',
-    fontFamily: 'Courier New',
-  },
-  buttonRow: {
-    marginBottom: 12,
-    gap: 8,
-  },
-  stopButton: {
-    backgroundColor: '#d32f2f',
-  },
-  loadingIndicator: {
+  waveformContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    marginBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    justifyContent: 'center',
+    gap: 6,
+    height: 80,
+    marginBottom: 16,
   },
-  processingText: {
-    marginLeft: 8,
-    color: '#007AFF',
-    fontSize: 12,
-    fontWeight: '600',
+  waveformBar: {
+    width: 3,
+    height: 60,
+    backgroundColor: '#007AFF',
+    borderRadius: 2,
   },
-  masterTranscriptPreview: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#4caf50',
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 12,
   },
-  previewLabel: {
-    fontSize: 12,
+  recordingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#ff4444',
+    marginRight: 8,
+    animation: 'pulse 1.5s ease-in-out infinite',
+  },
+  recordingText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
+  },
+  chunkCounter: {
+    fontSize: 13,
+    color: '#999',
+    fontWeight: '500',
+  },
+  liveTranscriptContainer: {
+    flex: 1,
+    marginBottom: 16,
+  },
+  liveTranscriptHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  previewText: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#555',
-    fontStyle: 'italic',
-    marginBottom: 8,
+  liveTranscriptTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    letterSpacing: 0.5,
   },
-  transcriptLength: {
-    fontSize: 11,
+  processingIndicator: {
+    width: 20,
+    height: 20,
+  },
+  liveTranscriptBox: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  transcriptContent: {
+    flex: 1,
+  },
+  pastTranscript: {
+    fontSize: 14,
+    lineHeight: 22,
     color: '#666',
-    textAlign: 'right',
+    marginBottom: 8,
+  },
+  currentTranscriptHighlight: {
+    backgroundColor: '#e3f2fd',
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 4,
+  },
+  currentTranscript: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  placeholderText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 24,
+  },
+  buttonContainer: {
+    gap: 12,
+  },
+  primaryButton: {
+    backgroundColor: '#007AFF',
+  },
+  stopButton: {
+    backgroundColor: '#ff4444',
+  },
+  statsContainer: {
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  statsText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });
 

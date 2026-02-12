@@ -320,12 +320,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#000000',
     marginBottom: 6,
+    textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 14,

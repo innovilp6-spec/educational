@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import RNFS from 'react-native-fs';
-import PrimaryButton from '../components/PrimaryButton';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import FloatingActionMenu from '../components/FloatingActionMenu';
+import { useAuth } from '../context/AuthContext';
+
+const SERVER_BASE_URL = 'http://10.0.2.2:5000';
 
 export default function TranscriptViewerScreen({ route, navigation }) {
     const { sessionName, transcript, transcriptId } = route.params;
     const [displayTranscript] = useState(transcript || '');
-    const [quickSummary, setQuickSummary] = useState(null);
-    const [detailedSummary, setDetailedSummary] = useState(null);
-    const [currentView, setCurrentView] = useState('transcript'); // 'transcript', 'quick', 'detailed'
+    const [summary, setSummary] = useState('');
     const [isLoadingSummary, setIsLoadingSummary] = useState(false);
     const [summaryFolderPath, setSummaryFolderPath] = useState(null);
     const { generateSummary } = useTranscriptAPI();
+    const { getUserEmail } = useAuth();
 
     useEffect(() => {
         initializeSummaryFolder();
@@ -31,162 +33,181 @@ export default function TranscriptViewerScreen({ route, navigation }) {
             
             setSummaryFolderPath(sessionFolder);
             
-            // Try to load existing summaries
-            await loadSummariesFromFiles(sessionFolder);
+            // Try to load existing summary
+            await loadSummaryFromFile(sessionFolder);
         } catch (err) {
             console.error('Error initializing summary folder:', err);
         }
     };
 
-    const loadSummariesFromFiles = async (folderPath) => {
+    const loadSummaryFromFile = async (folderPath) => {
         try {
-            const quickPath = `${folderPath}/quick_summary.txt`;
-            const detailedPath = `${folderPath}/detailed_summary.txt`;
+            const summaryPath = `${folderPath}/summary.txt`;
+            const exists = await RNFS.exists(summaryPath);
 
-            const quickExists = await RNFS.exists(quickPath);
-            const detailedExists = await RNFS.exists(detailedPath);
-
-            if (quickExists) {
-                const quickContent = await RNFS.readFile(quickPath, 'utf8');
-                setQuickSummary(quickContent);
-                console.log('Loaded quick summary from file');
-            }
-
-            if (detailedExists) {
-                const detailedContent = await RNFS.readFile(detailedPath, 'utf8');
-                setDetailedSummary(detailedContent);
-                console.log('Loaded detailed summary from file');
+            if (exists) {
+                const content = await RNFS.readFile(summaryPath, 'utf8');
+                setSummary(content);
+                console.log('Loaded summary from file');
             }
         } catch (err) {
-            console.error('Error loading summaries from files:', err);
+            console.error('Error loading summary from file:', err);
         }
     };
 
-    const saveSummaryToFile = async (fileName, content) => {
+    const saveSummaryToFile = async (content) => {
         try {
             if (!summaryFolderPath) return;
-            const filePath = `${summaryFolderPath}/${fileName}`;
+            const filePath = `${summaryFolderPath}/summary.txt`;
             await RNFS.writeFile(filePath, content, 'utf8');
-            console.log(`Saved ${fileName}`);
+            console.log('Saved summary');
         } catch (err) {
-            console.error(`Error saving ${fileName}:`, err);
+            console.error('Error saving summary:', err);
         }
     };
 
-    const handleGenerateSummary = async (summaryType) => {
+    const fixTranscriptOwnership = async () => {
+        try {
+            console.log('[fixTranscriptOwnership] Attempting to fix transcript ownership');
+            const userEmail = getUserEmail();
+            
+            const response = await fetch(`${SERVER_BASE_URL}/api/lectures/transcript/${transcriptId}/fix-ownership`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-email': userEmail,
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to fix ownership');
+            }
+
+            console.log('[fixTranscriptOwnership] Successfully fixed ownership:', data);
+            return true;
+        } catch (err) {
+            console.error('[fixTranscriptOwnership] Error:', err);
+            return false;
+        }
+    };
+
+    const handleGenerateSummary = async () => {
+        // If summary already exists, don't regenerate
+        if (summary && summary.trim().length > 0) {
+            return;
+        }
+
         if (!displayTranscript || !transcriptId) {
             Alert.alert('Error', 'Unable to generate summary. Transcript ID is missing.');
             return;
         }
 
-        // Check if summary already exists
-        if (summaryType === 'quick' && quickSummary) {
-            setCurrentView('quick');
-            return;
-        }
-        if (summaryType === 'detailed' && detailedSummary) {
-            setCurrentView('detailed');
-            return;
-        }
-
-        // Generate new summary via server API
         try {
             setIsLoadingSummary(true);
-            console.log(`Generating ${summaryType} summary from server for transcript ${transcriptId}...`);
+            console.log(`[TranscriptViewerScreen] Generating summary from server for transcript ${transcriptId}...`);
             
-            const summary = await generateSummary(transcriptId, summaryType);
+            const generatedSummary = await generateSummary(transcriptId);
             
-            if (summaryType === 'quick') {
-                setQuickSummary(summary);
-                await saveSummaryToFile('quick_summary.txt', summary);
-                setCurrentView('quick');
-            } else if (summaryType === 'detailed') {
-                setDetailedSummary(summary);
-                await saveSummaryToFile('detailed_summary.txt', summary);
-                setCurrentView('detailed');
-            }
+            setSummary(generatedSummary);
+            await saveSummaryToFile(generatedSummary);
         } catch (err) {
-            console.error(`Error generating ${summaryType} summary:`, err);
-            Alert.alert('Error', `Failed to generate ${summaryType} summary. Please try again.`);
+            console.error('[TranscriptViewerScreen] Error generating summary:', err);
+            
+            // Handle specific error cases
+            if (err.message.includes('403')) {
+                console.log('[TranscriptViewerScreen] Got 403 - attempting to fix ownership...');
+                
+                // Try to fix ownership
+                const fixed = await fixTranscriptOwnership();
+                
+                if (fixed) {
+                    // Retry generating summary
+                    try {
+                        const generatedSummary = await generateSummary(transcriptId);
+                        setSummary(generatedSummary);
+                        await saveSummaryToFile(generatedSummary);
+                        Alert.alert('Success', 'Transcript ownership fixed and summary generated!');
+                    } catch (retryErr) {
+                        console.error('[TranscriptViewerScreen] Retry failed:', retryErr);
+                        Alert.alert('Error', 'Failed to generate summary after fixing ownership. Please try again.');
+                    }
+                } else {
+                    Alert.alert('Authorization Error', 'Could not fix transcript ownership. Please contact support.');
+                }
+            } else if (err.message.includes('404')) {
+                Alert.alert('Not Found', 'The transcript could not be found. Please try recording again.');
+            } else {
+                Alert.alert('Error', 'Failed to generate summary. Please try again.');
+            }
         } finally {
             setIsLoadingSummary(false);
         }
     };
 
-    const getDisplayContent = () => {
-        switch (currentView) {
-            case 'quick':
-                return quickSummary || 'Quick summary not available.';
-            case 'detailed':
-                return detailedSummary || 'Detailed summary not available.';
-            case 'transcript':
-            default:
-                return displayTranscript || 'No transcript available.';
-        }
-    };
-
-    const getViewTitle = () => {
-        switch (currentView) {
-            case 'quick':
-                return 'Quick Summary';
-            case 'detailed':
-                return 'Detailed Summary';
-            case 'transcript':
-            default:
-                return 'Full Transcript';
-        }
-    };
-
-    const buttonsDisabled = isLoadingSummary;
-
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>{sessionName}</Text>
+            {/* Header */}
+            <View style={styles.header}>
+                <Text style={styles.title}>{sessionName}</Text>
+            </View>
 
-            {isLoadingSummary && (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#007AFF" />
-                    <Text style={styles.loadingText}>Summarising...</Text>
+            <View style={styles.contentContainer}>
+                {/* Summary Card - Top Half (Pinned Scrollable) */}
+                <View style={styles.summarySection}>
+                    <View style={styles.summaryHeader}>
+                        <Text style={styles.summaryTitle}>Summary</Text>
+                        {!summary && !isLoadingSummary && (
+                            <TouchableOpacity
+                                style={styles.generateButton}
+                                onPress={handleGenerateSummary}
+                            >
+                                <Text style={styles.generateButtonText}>Generate</Text>
+                            </TouchableOpacity>
+                        )}
+                        {isLoadingSummary && (
+                            <ActivityIndicator size="small" color="#007AFF" />
+                        )}
+                    </View>
+                    
+                    <ScrollView style={styles.summaryBox} showsVerticalScrollIndicator={false}>
+                        {summary ? (
+                            <Text style={styles.summaryText}>{summary}</Text>
+                        ) : (
+                            <Text style={styles.placeholderText}>
+                                {isLoadingSummary ? 'Generating summary...' : 'No summary yet. Tap Generate to create one.'}
+                            </Text>
+                        )}
+                    </ScrollView>
                 </View>
-            )}
 
-            <View style={styles.buttonContainer}>
-                <PrimaryButton 
-                    title="Transcript" 
-                    onPress={() => setCurrentView('transcript')}
-                    disabled={buttonsDisabled}
-                />
-                <PrimaryButton 
-                    title="Quick Summary" 
-                    onPress={() => handleGenerateSummary('quick')}
-                    disabled={buttonsDisabled}
-                />
-                <PrimaryButton 
-                    title="Detailed Summary" 
-                    onPress={() => handleGenerateSummary('detailed')}
-                    disabled={buttonsDisabled}
-                />
+                {/* Transcript - Bottom Half (Scrollable) */}
+                <View style={styles.transcriptSection}>
+                    <Text style={styles.transcriptTitle}>Full Transcript</Text>
+                    <ScrollView style={styles.transcriptBox} showsVerticalScrollIndicator={false}>
+                        <Text style={styles.transcriptText}>
+                            {displayTranscript || 'No transcript available.'}
+                        </Text>
+                    </ScrollView>
+                </View>
             </View>
 
-            <View style={styles.transcriptSection}>
-                <Text style={styles.sectionTitle}>{getViewTitle()}:</Text>
-                <ScrollView style={styles.transcriptBox}>
-                    <Text style={styles.transcriptText}>
-                        {getDisplayContent()}
-                    </Text>
-                </ScrollView>
-            </View>
-
-            <View style={styles.studyButtonContainer}>
-                <PrimaryButton 
-                    title="Study with Coach" 
-                    onPress={() => navigation.navigate('AgenticCoach', {
-                        transcriptId,
-                        sessionName,
-                        contextType: 'lecture',
-                        transcript: displayTranscript,
-                    })}
-                    disabled={buttonsDisabled}
+            {/* Floating Action Button */}
+            <View style={styles.fabContainer}>
+                <FloatingActionMenu
+                    actions={[
+                        {
+                            icon: '🧠',
+                            label: 'Coach',
+                            onPress: () => navigation.navigate('AgenticCoach', {
+                                transcriptId,
+                                sessionName,
+                                contextType: 'lecture',
+                                transcript: displayTranscript,
+                            }),
+                        },
+                    ]}
                 />
             </View>
         </View>
@@ -195,60 +216,118 @@ export default function TranscriptViewerScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
     container: { 
-        flex: 1, 
-        padding: 16,
-        backgroundColor: '#f5f5f5',
+        flex: 1,
+        backgroundColor: '#f8f8f8',
+    },
+    header: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        alignItems: 'center',
     },
     title: { 
-        fontSize: 20, 
-        fontWeight: 'bold',
-        marginBottom: 16,
+        fontSize: 22, 
+        fontWeight: '700',
+        color: '#000',
+        textAlign: 'center',
     },
-    loadingContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#e3f2fd',
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 16,
-    },
-    loadingText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#007AFF',
-        marginLeft: 12,
-    },
-    buttonContainer: { 
-        marginBottom: 16,
-    },
-    studyButtonContainer: {
-        marginTop: 12,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: '#ddd',
-    },
-    transcriptSection: {
+    contentContainer: {
         flex: 1,
+        flexDirection: 'column',
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        gap: 12,
     },
-    sectionTitle: {
+    // Summary Section - Top Half
+    summarySection: {
+        flex: 0.5,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+        overflow: 'hidden',
+    },
+    summaryHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        backgroundColor: '#f8f8f8',
+    },
+    summaryTitle: {
         fontSize: 14,
         fontWeight: '600',
-        marginBottom: 8,
         color: '#333',
+        letterSpacing: 0.5,
+    },
+    generateButton: {
+        backgroundColor: '#007AFF',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 6,
+    },
+    generateButtonText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#fff',
+    },
+    summaryBox: {
+        flex: 1,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+    },
+    summaryText: {
+        fontSize: 14,
+        lineHeight: 22,
+        color: '#333',
+    },
+    placeholderText: {
+        fontSize: 14,
+        color: '#999',
+        fontStyle: 'italic',
+        textAlign: 'center',
+        paddingVertical: 24,
+    },
+    // Transcript Section - Bottom Half
+    transcriptSection: {
+        flex: 0.5,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+        overflow: 'hidden',
+    },
+    transcriptTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#333',
+        letterSpacing: 0.5,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        backgroundColor: '#f8f8f8',
     },
     transcriptBox: {
         flex: 1,
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
     },
     transcriptText: { 
         fontSize: 14, 
         lineHeight: 22,
         color: '#333',
+    },
+    // Floating Action Button
+    fabContainer: {
+        position: 'absolute',
+        bottom: 20,
+        right: 20,
     },
 });
 

@@ -27,24 +27,27 @@ export default function useTranscriptAPI() {
 
             if (body) {
                 options.body = JSON.stringify(body);
+                console.log(`[makeServerRequest] Body to send:`, body);
+                console.log(`[makeServerRequest] Stringified body:`, options.body);
             }
 
             const url = `${SERVER_BASE_URL}${endpoint}`;
-            console.log(`Making ${method} request to: ${url}`);
-            console.log(`[useTranscriptAPI] User email in header: ${USER_EMAIL}`);
+            console.log(`[makeServerRequest] Making ${method} request to: ${url}`);
+            console.log(`[makeServerRequest] User email in header: ${USER_EMAIL}`);
+            console.log(`[makeServerRequest] Options:`, options);
 
             const res = await fetch(url, options);
 
             if (!res.ok) {
                 const errorData = await res.text();
-                console.error(`API Error (${res.status}):`, errorData);
+                console.error(`[makeServerRequest] API Error (${res.status}):`, errorData);
                 throw new Error(`HTTP ${res.status}: ${errorData}`);
             }
 
             const data = await res.json();
             return data;
         } catch (err) {
-            console.error("Server request error:", err);
+            console.error("[makeServerRequest] Server request error:", err);
             throw err;
         }
     };
@@ -137,10 +140,9 @@ export default function useTranscriptAPI() {
     const createTranscript = async (transcriptText, standard, chapter, topic, subject, sessionName) => {
         try {
             setIsProcessing(true);
-            console.log("Creating transcript on server...");
-
-            const response = await makeServerRequest("/api/lectures/transcript", "POST", {
-                transcriptText,
+            console.log("[createTranscript] Starting...");
+            console.log("[createTranscript] Params:", {
+                transcriptTextLength: transcriptText?.length,
                 standard,
                 chapter,
                 topic,
@@ -148,10 +150,23 @@ export default function useTranscriptAPI() {
                 sessionName,
             });
 
-            console.log("Transcript created:", response);
+            const payload = {
+                transcriptText,
+                standard,
+                chapter,
+                topic,
+                subject,
+                sessionName,
+            };
+
+            console.log("[createTranscript] Payload to send:", payload);
+
+            const response = await makeServerRequest("/api/lectures/transcript", "POST", payload);
+
+            console.log("[createTranscript] Response:", response);
             return response;
         } catch (err) {
-            console.error("Error creating transcript:", err);
+            console.error("[createTranscript] Error:", err);
             throw err;
         } finally {
             setIsProcessing(false);
@@ -200,18 +215,26 @@ export default function useTranscriptAPI() {
     const generateSummary = async (transcriptId, summaryType = "quick") => {
         try {
             setIsSummarizing(true);
-            console.log(`Generating ${summaryType} summary from server...`);
+            console.log(`[generateSummary] ===== START =====`);
+            console.log(`[generateSummary] Transcript ID:`, transcriptId);
+            console.log(`[generateSummary] Summary type:`, summaryType);
+            console.log(`[generateSummary] Generating ${summaryType} summary from server...`);
+
+            const endpoint = `/api/lectures/transcript/${transcriptId}/summary`;
+            console.log(`[generateSummary] Endpoint:`, endpoint);
 
             const response = await makeServerRequest(
-                `/api/lectures/transcript/${transcriptId}/summary`,
+                endpoint,
                 "POST",
                 { summaryType }
             );
 
-            console.log("Summary generated:", response);
+            console.log("[generateSummary] Summary generated successfully");
+            console.log("[generateSummary] Response:", response);
             return response.summary?.content || "";
         } catch (err) {
-            console.error("Error generating summary:", err);
+            console.error("[generateSummary] Error generating summary:", err);
+            console.error("[generateSummary] Error message:", err.message);
             throw err;
         } finally {
             setIsSummarizing(false);
@@ -285,14 +308,27 @@ export default function useTranscriptAPI() {
     // Get coach interaction history
     const getCoachHistory = async (contextId = null, contextType = null) => {
         try {
-            console.log("Getting coach history...", { contextId, contextType });
+            console.log("[Hook getCoachHistory] Called with:", { contextId, contextType });
+            console.log("[Hook getCoachHistory] contextId is null?", contextId === null);
+            console.log("[Hook getCoachHistory] contextId value:", contextId);
+            console.log("[Hook getCoachHistory] contextType value:", contextType);
 
             // Build query string
             const params = new URLSearchParams();
-            if (contextId) params.append('contextId', contextId);
-            if (contextType) params.append('contextType', contextType);
+            if (contextId) {
+                params.append('contextId', contextId);
+                console.log("[Hook getCoachHistory] Added contextId to params");
+            } else {
+                console.log("[Hook getCoachHistory] contextId is falsy, not adding to params");
+            }
+            if (contextType) {
+                params.append('contextType', contextType);
+                console.log("[Hook getCoachHistory] Added contextType to params");
+            }
 
             const queryString = params.toString() ? `?${params.toString()}` : '';
+            console.log("[Hook getCoachHistory] Final query string:", queryString);
+            
             const response = await makeServerRequest(`/api/coach/agentic/history${queryString}`, "GET");
 
             console.log("Coach history retrieved:", response);
@@ -1036,12 +1072,17 @@ export default function useTranscriptAPI() {
     // Confirm and switch context
     const confirmContextSwitch = async (selectedContextId, selectedContextType) => {
         try {
-            console.log("Confirming context switch:", { selectedContextId, selectedContextType });
+            console.log("[Hook] confirmContextSwitch called with:", { selectedContextId, selectedContextType });
+            console.log("[Hook] selectedContextId type:", typeof selectedContextId, "value:", selectedContextId);
+            console.log("[Hook] selectedContextType type:", typeof selectedContextType, "value:", selectedContextType);
+
+            const payload = { selectedContextId, selectedContextType };
+            console.log("[Hook] Payload being sent:", JSON.stringify(payload));
 
             const response = await makeServerRequest(
                 `/api/coach/agentic/confirm-context`,
                 "POST",
-                { selectedContextId, selectedContextType }
+                payload
             );
 
             console.log("Context switch confirmed:", response);
