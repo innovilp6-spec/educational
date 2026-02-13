@@ -47,6 +47,7 @@ const initialState = {
     recordingsLecture: false,
     captureBooks: false,
     voiceModality: false,
+    bionicText: false,
   },
   language: 'English',
   educationStandard: null,
@@ -67,6 +68,7 @@ const configSlice = createSlice({
         recordingsLecture: action.payload.recordingsLecture || false,
         captureBooks: action.payload.captureBooks || false,
         voiceModality: action.payload.voiceModality || false,
+        bionicText: action.payload.bionicText || false,
       };
       state.error = null;
       state.isLoading = false;
@@ -101,6 +103,7 @@ const configSlice = createSlice({
           recordingsLecture: servicePreferences.recordingsLecture || false,
           captureBooks: servicePreferences.captureBooks || false,
           voiceModality: servicePreferences.voiceModality || false,
+          bionicText: servicePreferences.bionicText || false,
         };
       }
       if (language) state.language = language;

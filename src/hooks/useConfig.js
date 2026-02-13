@@ -6,6 +6,7 @@ import {
   resetConfig,
   updateServicePreferenceAsync,
 } from '../store/slices/configSlice';
+import { hash } from 'react-native-fs';
 
 /**
  * Custom hook to access and manage user configuration and service preferences
@@ -28,6 +29,7 @@ export const useConfig = () => {
     hasRecordingsLecture: config.servicePreferences.recordingsLecture,
     hasCaptureBooks: config.servicePreferences.captureBooks,
     hasVoiceModality: config.servicePreferences.voiceModality,
+    hasBionicText: config.servicePreferences.bionicText,
 
     // Action dispatchers
     setServicePreferences: (prefs) =>

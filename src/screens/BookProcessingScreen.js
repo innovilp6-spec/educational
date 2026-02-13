@@ -158,7 +158,7 @@ const BookProcessingScreen = ({ route, navigation }) => {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Processing Book</Text>
+                <SpecialText style={styles.headerTitle}>Processing Book</SpecialText>
             </View>
 
             {/* Content */}
@@ -168,22 +168,22 @@ const BookProcessingScreen = ({ route, navigation }) => {
                         {/* Error State */}
                         <View style={styles.centerContent}>
                             <FontAwesome name="exclamation-triangle" size={80} color="#FF6B6B" />
-                            <Text style={styles.errorTitle}>Processing Failed</Text>
-                            <Text style={styles.errorMessage}>{errorMessage}</Text>
+                            <SpecialText style={styles.errorTitle}>Processing Failed</SpecialText>
+                            <SpecialText style={styles.errorMessage}>{errorMessage}</SpecialText>
 
                             <TouchableOpacity
                                 style={styles.retryButton}
                                 onPress={retryProcessing}
                             >
                                 <FontAwesome name="refresh" size={20} color="#fff" />
-                                <Text style={styles.retryButtonText}>Retry</Text>
+                                <SpecialText style={styles.retryButtonText}>Retry</SpecialText>
                             </TouchableOpacity>
 
                             <TouchableOpacity
                                 style={styles.cancelButton}
                                 onPress={() => navigation.goBack()}
                             >
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                                <SpecialText style={styles.cancelButtonText}>Cancel</SpecialText>
                             </TouchableOpacity>
                         </View>
                     </>
@@ -193,13 +193,13 @@ const BookProcessingScreen = ({ route, navigation }) => {
                         <View style={styles.centerContent}>
                             <ActivityIndicator size="large" color="#4CAF50" />
 
-                            <Text style={styles.processingTitle}>Processing Images</Text>
+                            <SpecialText style={styles.processingTitle}>Processing Images</SpecialText>
 
                             {/* Progress Counter */}
                             <View style={styles.progressCounter}>
-                                <Text style={styles.progressText}>
+                                <SpecialText style={styles.progressText}>
                                     {processedPages} of {totalPages} pages
-                                </Text>
+                                </SpecialText>
                             </View>
 
                             {/* Progress Bar */}
@@ -213,27 +213,27 @@ const BookProcessingScreen = ({ route, navigation }) => {
                             </View>
 
                             {/* Estimated Time */}
-                            <Text style={styles.estimatedTime}>
+                            <SpecialText style={styles.estimatedTime}>
                                 Estimated time: {estimatedTimeRemaining}s remaining
-                            </Text>
+                            </SpecialText>
 
                             {/* Details */}
                             <View style={styles.detailsBox}>
-                                <Text style={styles.detailText}>
-                                    📷 Title: {title || 'Captured Book'}
-                                </Text>
-                                <Text style={styles.detailText}>
-                                    📂 Category: {category || 'other'}
-                                </Text>
-                                <Text style={styles.detailText}>
-                                    📄 Total Pages: {totalPages}
-                                </Text>
+                                <SpecialText style={styles.detailText}>
+                                    <Text>📷</Text> Title: {title || 'Captured Book'}
+                                </SpecialText>
+                                <SpecialText style={styles.detailText}>
+                                    <Text>📂</Text> Category: {category || 'other'}
+                                </SpecialText>
+                                <SpecialText style={styles.detailText}>
+                                    <Text>📄</Text> Total Pages: {totalPages}
+                                </SpecialText>
                             </View>
 
                             {/* Processing Note */}
-                            <Text style={styles.processingNote}>
+                            <SpecialText style={styles.processingNote}>
                                 Using Azure Vision API for text recognition. Please wait...
-                            </Text>
+                            </SpecialText>
                         </View>
                     </>
                 )}

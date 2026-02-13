@@ -170,6 +170,25 @@ export default function FloatingSettingsButton() {
               </View>
             </View>
 
+            {/* Bionic Text */}
+            <View style={styles.preferenceItem}>
+              <View style={styles.preferenceContent}>
+                <Text style={styles.preferenceIcon}>👁️</Text>
+                <View style={styles.preferenceText}>
+                  <Text style={styles.preferenceName}>Bionic Text</Text>
+                  <Text style={styles.preferenceDescription}>
+                    Enable enhanced readability with bionic text rendering
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={servicePreferences.bionicText}
+                onValueChange={() => toggleServicePreference('bionicText')}
+                trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
+                thumbColor={servicePreferences.bionicText ? '#4caf50' : '#f1f1f1'}
+                disabled={isLoading}
+              />
+            </View>
             {/* Info Box */}
             <View style={styles.infoBox}>
               <Text style={styles.infoTitle}>💡 Note</Text>

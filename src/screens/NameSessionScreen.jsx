@@ -6,6 +6,7 @@ import InfoButton from '../components/InfoButton';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
 import { useConfig } from '../hooks/useConfig';
 import { NAMING_NOMENCLATURE, DETAILED_GUIDELINES, validateName } from '../utils/namingNomenclature';
+import SpecialText from '../components/SpecialText';
 
 export default function NameSessionScreen({ navigation, route }) {
   const { masterTranscript } = route.params;
@@ -133,7 +134,7 @@ export default function NameSessionScreen({ navigation, route }) {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.innerContainer}>
         <View style={styles.titleSection}>
-          <Text style={styles.title}>Name this lecture</Text>
+          <SpecialText style={styles.title}>Name this lecture</SpecialText>
         </View>
         <View style={styles.infobuttonContainer}>
           <InfoButton
@@ -147,32 +148,32 @@ export default function NameSessionScreen({ navigation, route }) {
 
         {/* Nomenclature Pattern Display */}
         <View style={styles.patternCard}>
-          <Text style={styles.patternLabel}>Suggested Format:</Text>
-          <Text style={styles.pattern}>{nomenclature.pattern}</Text>
-          <Text style={styles.patternExample}>Example: {nomenclature.example}</Text>
+          <SpecialText style={styles.patternLabel}>Suggested Format:</SpecialText>
+          <SpecialText style={styles.pattern}>{nomenclature.pattern}</SpecialText>
+          <SpecialText style={styles.patternExample}>Example: {nomenclature.example}</SpecialText>
         </View>
 
         {/* Guidelines Display */}
         <View style={styles.guidelinesCard}>
-          <Text style={styles.guidelinesTitle}>Quick Guidelines:</Text>
+          <SpecialText style={styles.guidelinesTitle}>Quick Guidelines:</SpecialText>
           {nomenclature.guidelines.map((guideline, index) => (
-            <Text key={index} style={styles.guidelineItem}>
+            <SpecialText key={index} style={styles.guidelineItem}>
               {guideline}
-            </Text>
+            </SpecialText>
           ))}
         </View>
 
         {/* Examples */}
         <View style={styles.examplesCard}>
-          <Text style={styles.examplesTitle}>Examples of Good Names:</Text>
+          <SpecialText style={styles.examplesTitle}>Examples of Good Names:</SpecialText>
           {nomenclature.examples.map((example, index) => (
-            <Text key={index} style={styles.exampleItem}>
-              ✓ {example}
-            </Text>
+            <SpecialText key={index} style={styles.exampleItem}>
+              <Text>✓</Text> {example}
+            </SpecialText>
           ))}
         </View>
 
-        <Text style={styles.inputLabel}>Enter Lecture Name:</Text>
+        <SpecialText style={styles.inputLabel}>Enter Lecture Name:</SpecialText>
         <TextInput
           style={styles.input}
           placeholder={nomenclature.example}
@@ -184,11 +185,11 @@ export default function NameSessionScreen({ navigation, route }) {
         />
 
         {name.length > 0 && (
-          <Text style={styles.charCount}>{name.length}/100 characters</Text>
+          <SpecialText style={styles.charCount}>{name.length}/100 characters</SpecialText>
         )}
 
         {/* Subject Field */}
-        <Text style={styles.inputLabel}>Subject:</Text>
+        <SpecialText style={styles.inputLabel}>Subject:</SpecialText>
         <TextInput
           style={styles.input}
           placeholder="e.g., Mathematics, Science, English"
@@ -200,7 +201,7 @@ export default function NameSessionScreen({ navigation, route }) {
         />
 
         {/* Chapter/Topic Field */}
-        <Text style={styles.inputLabel}>Chapter/Topic:</Text>
+        <SpecialText style={styles.inputLabel}>Chapter/Topic:</SpecialText>
         <TextInput
           style={styles.input}
           placeholder="e.g., Chapter 5, Data Types, Algebra Basics"
@@ -212,7 +213,7 @@ export default function NameSessionScreen({ navigation, route }) {
         />
 
         {/* Standard/Grade Field */}
-        <Text style={styles.inputLabel}>Standard/Grade:</Text>
+        <SpecialText style={styles.inputLabel}>Standard/Grade:</SpecialText>
         <TextInput
           readOnly
           style={styles.input}
@@ -224,12 +225,12 @@ export default function NameSessionScreen({ navigation, route }) {
           maxLength={2}
           keyboardType="numeric"
         />
-        <Text style={styles.helpText}>Valid values: 6, 7, 8, 9, 10, 11, 12</Text>
+        <SpecialText style={styles.helpText}>Valid values: 6, 7, 8, 9, 10, 11, 12</SpecialText>
 
         {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>Creating transcript...</Text>
+            <SpecialText style={styles.loadingText}>Creating transcript...</SpecialText>
           </View>
         )}
 

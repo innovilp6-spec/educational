@@ -58,6 +58,7 @@ export default function RegisterScreen({ navigation }) {
     recordingsLecture: false,
     captureBooks: false,
     voiceModality: false,
+    bionicText: false,
   });
 
   // Legacy services (kept for backward compatibility)
@@ -427,6 +428,24 @@ export default function RegisterScreen({ navigation }) {
               <Switch
                 value={servicePreferences.voiceModality}
                 onValueChange={() => toggleServicePreference('voiceModality')}
+                disabled={isLoading}
+              />
+            </View>
+
+            {/* Bionic Text */}
+            <View style={styles.serviceItem}>
+              <View style={styles.serviceContent}>
+                <Text style={styles.serviceIcon}>👁️</Text>
+                <View style={styles.serviceText}>
+                  <Text style={styles.serviceName}>Bionic Text</Text>
+                  <Text style={styles.serviceDescription}>
+                    Enable enhanced readability with bionic text rendering
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={servicePreferences.bionicText}
+                onValueChange={() => toggleServicePreference('bionicText')}
                 disabled={isLoading}
               />
             </View>

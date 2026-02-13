@@ -4,6 +4,7 @@ import RNFS from 'react-native-fs';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
 import FloatingActionMenu from '../components/FloatingActionMenu';
 import { useAuth } from '../context/AuthContext';
+import SpecialText from '../components/SpecialText';
 
 const SERVER_BASE_URL = 'http://10.0.2.2:5000';
 
@@ -150,20 +151,20 @@ export default function TranscriptViewerScreen({ route, navigation }) {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.title}>{sessionName}</Text>
+                <SpecialText style={styles.title}>{sessionName}</SpecialText>
             </View>
 
             <View style={styles.contentContainer}>
                 {/* Summary Card - Top Half (Pinned Scrollable) */}
                 <View style={styles.summarySection}>
                     <View style={styles.summaryHeader}>
-                        <Text style={styles.summaryTitle}>Summary</Text>
+                        <SpecialText style={styles.summaryTitle}>Summary</SpecialText>
                         {!summary && !isLoadingSummary && (
                             <TouchableOpacity
                                 style={styles.generateButton}
                                 onPress={handleGenerateSummary}
                             >
-                                <Text style={styles.generateButtonText}>Generate</Text>
+                                <SpecialText style={styles.generateButtonText}>Generate</SpecialText>
                             </TouchableOpacity>
                         )}
                         {isLoadingSummary && (
@@ -173,22 +174,22 @@ export default function TranscriptViewerScreen({ route, navigation }) {
                     
                     <ScrollView style={styles.summaryBox} showsVerticalScrollIndicator={false}>
                         {summary ? (
-                            <Text style={styles.summaryText}>{summary}</Text>
+                            <SpecialText style={styles.summaryText}>{summary}</SpecialText>
                         ) : (
-                            <Text style={styles.placeholderText}>
+                            <SpecialText style={styles.placeholderText}>
                                 {isLoadingSummary ? 'Generating summary...' : 'No summary yet. Tap Generate to create one.'}
-                            </Text>
+                            </SpecialText>
                         )}
                     </ScrollView>
                 </View>
 
                 {/* Transcript - Bottom Half (Scrollable) */}
                 <View style={styles.transcriptSection}>
-                    <Text style={styles.transcriptTitle}>Full Transcript</Text>
+                    <SpecialText style={styles.transcriptTitle}>Full Transcript</SpecialText>
                     <ScrollView style={styles.transcriptBox} showsVerticalScrollIndicator={false}>
-                        <Text style={styles.transcriptText}>
+                        <SpecialText style={styles.transcriptText}>
                             {displayTranscript || 'No transcript available.'}
-                        </Text>
+                        </SpecialText>
                     </ScrollView>
                 </View>
             </View>

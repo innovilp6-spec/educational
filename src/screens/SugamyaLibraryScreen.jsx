@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import PrimaryButton from '../components/PrimaryButton';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import SpecialText from '../components/SpecialText';
 
 const COLORS = {
   primary: '#0d0d14',
@@ -185,13 +186,13 @@ export default function SugamyaLibraryScreen() {
       }}
     >
       <View style={styles.bookCardContent}>
-        <Text style={styles.bookTitle} numberOfLines={2}>
+        <SpecialText style={styles.bookTitle} numberOfLines={2}>
           {item.title}
-        </Text>
-        <Text style={styles.bookAuthor}>{item.author}</Text>
+        </SpecialText>
+        <SpecialText style={styles.bookAuthor}>{item.author}</SpecialText>
         <View style={styles.bookMeta}>
-          <Text style={styles.bookFormat}>{item.format}</Text>
-          <Text
+          <SpecialText style={styles.bookFormat}>{item.format}</SpecialText>
+          <SpecialText
             style={[
               styles.bookAvailability,
               item.availability === 'free'
@@ -200,7 +201,7 @@ export default function SugamyaLibraryScreen() {
             ]}
           >
             {item.availability === 'free' ? '✓ Free' : 'Restricted'}
-          </Text>
+          </SpecialText>
         </View>
       </View>
     </TouchableOpacity>
@@ -210,10 +211,10 @@ export default function SugamyaLibraryScreen() {
   const renderDownloadItem = ({ item }) => (
     <View style={styles.downloadItem}>
       <View style={styles.downloadInfo}>
-        <Text style={styles.downloadTitle}>{item.bookTitle}</Text>
-        <Text style={styles.downloadAuthor}>{item.bookAuthor}</Text>
+        <SpecialText style={styles.downloadTitle}>{item.bookTitle}</SpecialText>
+        <SpecialText style={styles.downloadAuthor}>{item.bookAuthor}</SpecialText>
         <View style={styles.downloadStatus}>
-          <Text
+          <SpecialText
             style={[
               styles.statusBadge,
               item.status === 'ready' && styles.statusReady,
@@ -222,13 +223,13 @@ export default function SugamyaLibraryScreen() {
             ]}
           >
             {item.status?.toUpperCase()}
-          </Text>
-          <Text style={styles.downloadFormat}>{item.format}</Text>
+          </SpecialText>
+          <SpecialText style={styles.downloadFormat}>{item.format}</SpecialText>
         </View>
       </View>
-      <Text style={styles.downloadDate}>
+      <SpecialText style={styles.downloadDate}>
         {new Date(item.requestedAt).toLocaleDateString()}
-      </Text>
+      </SpecialText>
     </View>
   );
 
@@ -237,22 +238,22 @@ export default function SugamyaLibraryScreen() {
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       {/* Agentic Search Status */}
       {/* <View style={styles.agenticStatus}>
-        <Text style={styles.agenticTitle}>🤖 Agentic Search</Text>
-        <Text style={styles.agenticDescription}>Searching books based on your profile...</Text>
+        <SpecialText style={styles.agenticTitle}>🤖 Agentic Search</SpecialText>
+        <SpecialText style={styles.agenticDescription}>Searching books based on your profile...</SpecialText>
 
         {userProfile && (
           <View style={styles.profileCard}>
             <View style={styles.profileItem}>
-              <Text style={styles.profileLabel}>📚 Grade</Text>
-              <Text style={styles.profileValue}>{userProfile.grade || 'Not set'}</Text>
+              <SpecialText style={styles.profileLabel}>📚 Grade</SpecialText>
+              <SpecialText style={styles.profileValue}>{userProfile.grade || 'Not set'}</SpecialText>
             </View>
             <View style={styles.profileItem}>
-              <Text style={styles.profileLabel}>🌐 Language</Text>
-              <Text style={styles.profileValue}>{userProfile.language || 'English'}</Text>
+              <SpecialText style={styles.profileLabel}>🌐 Language</SpecialText>
+              <SpecialText style={styles.profileValue}>{userProfile.language || 'English'}</SpecialText>
             </View>
             <View style={styles.profileItem}>
-              <Text style={styles.profileLabel}>📄 Format</Text>
-              <Text style={styles.profileValue}>{userProfile.formatPreference || 'DAISY'}</Text>
+              <SpecialText style={styles.profileLabel}>📄 Format</SpecialText>
+              <SpecialText style={styles.profileValue}>{userProfile.formatPreference || 'DAISY'}</SpecialText>
             </View>
           </View>
         )}
@@ -268,13 +269,13 @@ export default function SugamyaLibraryScreen() {
         {isLoadingSearch ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={styles.refreshButtonText}>🔄 Refresh Search</Text>
+          <SpecialText style={styles.refreshButtonText}>🔄 Refresh Search</SpecialText>
         )}
       </TouchableOpacity> */}
 
       {searchResults.length > 0 && (
         <View style={styles.resultsInfo}>
-          <Text style={styles.resultsCount}>Found {searchResults.length} books</Text>
+          <SpecialText style={styles.resultsCount}>Found {searchResults.length} books</SpecialText>
         </View>
       )}
 
@@ -286,12 +287,12 @@ export default function SugamyaLibraryScreen() {
         ListEmptyComponent={
           searchResults.length === 0 && !isLoadingSearch ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>📖 No books found</Text>
-              <Text style={styles.emptyText}>
+              <SpecialText style={styles.emptyTitle}><Text>📖</Text> No books found</SpecialText>
+              <SpecialText style={styles.emptyText}>
                 {userProfile
                   ? `No books available in ${userProfile.language} format for Grade ${userProfile.grade}`
                   : 'Try refreshing to load books'}
-              </Text>
+              </SpecialText>
             </View>
           ) : null
         }
@@ -312,7 +313,7 @@ export default function SugamyaLibraryScreen() {
         {isProcessing ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={styles.loadButtonText}>⭐ Load Popular Books</Text>
+          <SpecialText style={styles.loadButtonText}>⭐ Load Popular Books</SpecialText>
         )}
       </TouchableOpacity> */}
 
@@ -322,7 +323,7 @@ export default function SugamyaLibraryScreen() {
         keyExtractor={(item, idx) => `popular-book-${item.sugamyaId || item.bookId || item.id || idx}`}
         scrollEnabled={false}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No popular books available</Text>
+          <SpecialText style={styles.emptyText}>No popular books available</SpecialText>
         }
       />
     </ScrollView>
@@ -332,7 +333,7 @@ export default function SugamyaLibraryScreen() {
   const renderDownloadsTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       <View style={styles.downloadsHeader}>
-        <Text style={styles.downloadsTitle}>📥 Your Downloads</Text>
+        <SpecialText style={styles.downloadsTitle}><Text>📥</Text> Your Downloads</SpecialText>
         <TouchableOpacity
           style={styles.refreshButton}
           onPress={loadDownloads}
@@ -343,7 +344,7 @@ export default function SugamyaLibraryScreen() {
       </View>
 
       {downloads.length === 0 ? (
-        <Text style={styles.emptyText}>No downloads yet. Search for books to get started!</Text>
+        <SpecialText style={styles.emptyText}>No downloads yet. Search for books to get started!</SpecialText>
       ) : (
         <FlatList
           data={downloads}
@@ -360,24 +361,24 @@ export default function SugamyaLibraryScreen() {
     const renderRequestItem = (item) => (
       <View style={styles.requestItem}>
         <View style={styles.requestHeader}>
-          <Text style={styles.requestTitle}>{item.bookTitle}</Text>
-          <Text style={[
+          <SpecialText style={styles.requestTitle}>{item.bookTitle}</SpecialText>
+          <SpecialText style={[
             styles.requestStatus,
             { color: item.status === 'completed' ? COLORS.success : COLORS.warning }
           ]}>
             {item.status === 'completed' ? '✓' : '⏳'} {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-          </Text>
+          </SpecialText>
         </View>
-        <Text style={styles.requestFormat}>Format: {item.format}</Text>
+        <SpecialText style={styles.requestFormat}>Format: {item.format}</SpecialText>
         {item.expiryDate && (
-          <Text style={styles.requestExpiry}>Expires: {item.expiryDate}</Text>
+          <SpecialText style={styles.requestExpiry}>Expires: {item.expiryDate}</SpecialText>
         )}
         {item.status === 'completed' && item.downloadLink && (
           <TouchableOpacity
             style={styles.downloadLinkButton}
             onPress={() => alert('Opening download link: ' + item.downloadLink)}
           >
-            <Text style={styles.downloadLinkText}>📥 Download Now</Text>
+            <SpecialText style={styles.downloadLinkText}><Text>📥</Text> Download Now</SpecialText>
           </TouchableOpacity>
         )}
       </View>
@@ -386,7 +387,7 @@ export default function SugamyaLibraryScreen() {
     return (
       <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
         <View style={styles.downloadsHeader}>
-          <Text style={styles.downloadsTitle}>⏳ Download Requests</Text>
+          <SpecialText style={styles.downloadsTitle}><Text>⏳</Text> Download Requests</SpecialText>
           <TouchableOpacity
             style={styles.refreshButton}
             onPress={loadDownloadRequests}
@@ -397,7 +398,7 @@ export default function SugamyaLibraryScreen() {
         </View>
 
         {downloadRequests.length === 0 ? (
-          <Text style={styles.emptyText}>No pending download requests. Request books to get started!</Text>
+          <SpecialText style={styles.emptyText}>No pending download requests. Request books to get started!</SpecialText>
         ) : (
           <FlatList
             data={downloadRequests}
@@ -415,10 +416,10 @@ export default function SugamyaLibraryScreen() {
     const renderHistoryItem = (item) => (
       <View style={styles.historyItem}>
         <View style={styles.historyHeader}>
-          <Text style={styles.historyTitle}>{item.bookTitle}</Text>
+          <SpecialText style={styles.historyTitle}>{item.bookTitle}</SpecialText>
         </View>
-        <Text style={styles.historyAuthor}>Author: {item.bookAuthor}</Text>
-        <Text style={styles.historyFormat}>Format: {item.format}</Text>
+        <SpecialText style={styles.historyAuthor}>Author: {item.bookAuthor}</SpecialText>
+        <SpecialText style={styles.historyFormat}>Format: {item.format}</SpecialText>
         <TouchableOpacity
           style={styles.historyDownloadButton}
           onPress={() => {
@@ -429,7 +430,7 @@ export default function SugamyaLibraryScreen() {
             }
           }}
         >
-          <Text style={styles.historyDownloadButtonText}>📥 Access Book</Text>
+          <SpecialText style={styles.historyDownloadButtonText}><Text>📥</Text> Access Book</SpecialText>
         </TouchableOpacity>
       </View>
     );
@@ -437,18 +438,18 @@ export default function SugamyaLibraryScreen() {
     return (
       <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
         <View style={styles.downloadsHeader}>
-          <Text style={styles.downloadsTitle}>📖 Reading History</Text>
+          <SpecialText style={styles.downloadsTitle}>📖 Reading History</SpecialText>
           <TouchableOpacity
             style={styles.refreshButton}
             onPress={loadUserHistory}
             disabled={isProcessing}
           >
-            <Text style={styles.refreshButtonText}>↻</Text>
+            <SpecialText style={styles.refreshButtonText}>↻</SpecialText>
           </TouchableOpacity>
         </View>
 
         {userHistory.length === 0 ? (
-          <Text style={styles.emptyText}>No reading history yet. Browse and read books to see them here!</Text>
+          <SpecialText style={styles.emptyText}>No reading history yet. Browse and read books to see them here!</SpecialText>
         ) : (
           <FlatList
             data={userHistory}
@@ -475,38 +476,38 @@ export default function SugamyaLibraryScreen() {
             style={styles.closeButton}
             onPress={() => setBookDetailsModalVisible(false)}
           >
-            <Text style={styles.closeButtonText}>✕</Text>
+            <SpecialText style={styles.closeButtonText}>✕</SpecialText>
           </TouchableOpacity>
 
           {selectedBook && (
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>{selectedBook.title}</Text>
-              <Text style={styles.modalAuthor}>{selectedBook.author}</Text>
+              <SpecialText style={styles.modalTitle}>{selectedBook.title}</SpecialText>
+              <SpecialText style={styles.modalAuthor}>{selectedBook.author}</SpecialText>
 
               <View style={styles.modalDetails}>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Format:</Text>
-                  <Text style={styles.detailValue}>{selectedBook.format}</Text>
+                  <SpecialText style={styles.detailLabel}>Format:</SpecialText>
+                  <SpecialText style={styles.detailValue}>{selectedBook.format}</SpecialText>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Size:</Text>
-                  <Text style={styles.detailValue}>{selectedBook.size}</Text>
+                  <SpecialText style={styles.detailLabel}>Size:</SpecialText>
+                  <SpecialText style={styles.detailValue}>{selectedBook.size}</SpecialText>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Availability:</Text>
-                  <Text
+                  <SpecialText style={styles.detailLabel}>Availability:</SpecialText>
+                  <SpecialText
                     style={[
                       styles.detailValue,
                       selectedBook.availability === 'free' && { color: COLORS.success },
                     ]}
                   >
                     {selectedBook.availability}
-                  </Text>
+                  </SpecialText>
                 </View>
                 {selectedBook.synopsis && (
                   <View style={styles.synopsisSection}>
-                    <Text style={styles.synopsisLabel}>Synopsis:</Text>
-                    <Text style={styles.synopsisText}>{selectedBook.synopsis}</Text>
+                    <SpecialText style={styles.synopsisLabel}>Synopsis:</SpecialText>
+                    <SpecialText style={styles.synopsisText}>{selectedBook.synopsis}</SpecialText>
                   </View>
                 )}
               </View>
@@ -519,7 +520,7 @@ export default function SugamyaLibraryScreen() {
                 {isRequestingDownload ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text style={styles.downloadButtonText}>📥 Request Download</Text>
+                  <SpecialText style={styles.downloadButtonText}><Text>📥</Text> Request Download</SpecialText>
                 )}
               </TouchableOpacity>
             </ScrollView>
@@ -533,8 +534,8 @@ export default function SugamyaLibraryScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📚 Sugamya Pustakalaya</Text>
-        <Text style={styles.headerSubtitle}>Accessible Digital Library</Text>
+        <SpecialText style={styles.headerTitle}><Text>📚</Text> Sugamya Pustakalaya</SpecialText>
+        <SpecialText style={styles.headerSubtitle}>Accessible Digital Library</SpecialText>
       </View>
 
       {/* Tab Navigation */}
@@ -543,11 +544,11 @@ export default function SugamyaLibraryScreen() {
           style={[styles.tab, activeTab === 'search' && styles.tabActive]}
           onPress={() => setActiveTab('search')}
         >
-          <Text
+          <SpecialText
             style={[styles.tabText, activeTab === 'search' && styles.tabTextActive]}
           >
-            🔍 Search
-          </Text>
+            <Text>🔍</Text> Search
+          </SpecialText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'popular' && styles.tabActive]}
@@ -556,41 +557,41 @@ export default function SugamyaLibraryScreen() {
             if (popularBooks.length === 0) loadPopular();
           }}
         >
-          <Text
+          <SpecialText
             style={[styles.tabText, activeTab === 'popular' && styles.tabTextActive]}
           >
-            ⭐ Popular
-          </Text>
+            <Text>⭐</Text> Popular
+          </SpecialText>
         </TouchableOpacity>
         {/* <TouchableOpacity
           style={[styles.tab, activeTab === 'downloads' && styles.tabActive]}
           onPress={() => setActiveTab('downloads')}
         >
-          <Text
+          <SpecialText
             style={[styles.tabText, activeTab === 'downloads' && styles.tabTextActive]}
           >
             📥 Downloads
-          </Text>
+          </SpecialText>
         </TouchableOpacity> */}
         <TouchableOpacity
           style={[styles.tab, activeTab === 'downloadRequests' && styles.tabActive]}
           onPress={() => setActiveTab('downloadRequests')}
         >
-          <Text
+          <SpecialText
             style={[styles.tabText, activeTab === 'downloadRequests' && styles.tabTextActive]}
           >
-            ⏳ Requests
-          </Text>
+            <Text>⏳</Text> Requests
+          </SpecialText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'history' && styles.tabActive]}
           onPress={() => setActiveTab('history')}
         >
-          <Text
+          <SpecialText
             style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}
           >
-            📖 History
-          </Text>
+            <Text>📖</Text> History
+          </SpecialText>
         </TouchableOpacity>
       </View>
 

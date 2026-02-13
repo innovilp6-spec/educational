@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, SafeAreaView } from 'react-native';
 import RNFS from 'react-native-fs';
 import { useNavigation } from '@react-navigation/native';
+import SpecialText from '../components/SpecialText';
 
 export default function RecordingListScreen() {
   const [recordings, setRecordings] = useState([]);
@@ -110,7 +111,7 @@ export default function RecordingListScreen() {
     >
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{item.name}</Text>
+          <SpecialText style={styles.cardTitle}>{item.name}</SpecialText>
           <View style={styles.badgeContainer}>
             {item.transcript && (
               <View style={styles.transcriptBadge}>
@@ -121,15 +122,15 @@ export default function RecordingListScreen() {
         </View>
 
         {item.transcript && (
-          <Text style={styles.cardPreview} numberOfLines={2}>
+          <SpecialText style={styles.cardPreview} numberOfLines={2}>
             {item.transcript.substring(0, 100)}...
-          </Text>
+          </SpecialText>
         )}
 
         <View style={styles.cardFooter}>
-          <Text style={styles.cardMeta}>
+          <SpecialText style={styles.cardMeta}>
             {item.transcript.split(' ').length} words
-          </Text>
+          </SpecialText>
           <TouchableOpacity
             style={styles.deleteIconButton}
             onPress={() => handleDeleteRecording(item)}
@@ -146,16 +147,16 @@ export default function RecordingListScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Your Recordings</Text>
-        <Text style={styles.headerSubtitle}>{recordings.length} saved</Text>
+        <SpecialText style={styles.headerTitle}>Your Recordings</SpecialText>
+        <SpecialText style={styles.headerSubtitle}>{recordings.length} saved</SpecialText>
       </View>
 
       {/* Empty State */}
       {!loading && recordings.length === 0 && (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>🎙️</Text>
-          <Text style={styles.emptyText}>No recordings yet</Text>
-          <Text style={styles.emptySubtext}>Start recording a lecture to see it here</Text>
+          <SpecialText style={styles.emptyText}>No recordings yet</SpecialText>
+          <SpecialText style={styles.emptySubtext}>Start recording a lecture to see it here</SpecialText>
         </View>
       )}
 

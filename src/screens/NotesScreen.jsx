@@ -14,6 +14,7 @@ import useTranscriptAPI from '../hooks/useTranscriptAPI';
 import PrimaryButton from '../components/PrimaryButton';
 import InfoButton from '../components/InfoButton';
 import { NAMING_NOMENCLATURE, DETAILED_GUIDELINES, validateName } from '../utils/namingNomenclature';
+import SpecialText from '../components/SpecialText';
 
 export default function NotesScreen({ navigation }) {
     const [notes, setNotes] = useState([]);
@@ -146,40 +147,40 @@ export default function NotesScreen({ navigation }) {
                         style={styles.backButton}
                         onPress={() => setSelectedNote(null)}
                     >
-                        <Text style={styles.backButtonText}>← Back</Text>
+                        <SpecialText style={styles.backButtonText}><Text>←</Text> Back</SpecialText>
                     </TouchableOpacity>
-                    <Text style={styles.detailTitle}>{selectedNote.name || selectedNote.title}</Text>
+                    <SpecialText style={styles.detailTitle}>{selectedNote.name || selectedNote.title}</SpecialText>
                     <TouchableOpacity
                         style={styles.deleteButton}
                         onPress={() => handleDeleteNote(selectedNote._id)}
                     >
-                        <Text style={styles.deleteButtonText}>Delete</Text>
+                        <SpecialText style={styles.deleteButtonText}>Delete</SpecialText>
                     </TouchableOpacity>
                 </View>
 
                 <ScrollView style={styles.detailContent}>
                     <View style={styles.metaDataContainer}>
-                        {selectedNote.name && <Text style={styles.metaLabel}>Name: <Text style={styles.metaValue}>{selectedNote.name}</Text></Text>}
-                        <Text style={styles.metaLabel}>Title: <Text style={styles.metaValue}>{selectedNote.title}</Text></Text>
-                        <Text style={styles.metaLabel}>Standard: <Text style={styles.metaValue}>{selectedNote.standard}</Text></Text>
-                        <Text style={styles.metaLabel}>Chapter: <Text style={styles.metaValue}>{selectedNote.chapter}</Text></Text>
-                        <Text style={styles.metaLabel}>Topic: <Text style={styles.metaValue}>{selectedNote.topic}</Text></Text>
+                        {selectedNote.name && <SpecialText style={styles.metaLabel}>Name: <SpecialText style={styles.metaValue}>{selectedNote.name}</SpecialText></SpecialText>}
+                        <SpecialText style={styles.metaLabel}>Title: <SpecialText style={styles.metaValue}>{selectedNote.title}</SpecialText></SpecialText>
+                        <SpecialText style={styles.metaLabel}>Standard: <SpecialText style={styles.metaValue}>{selectedNote.standard}</SpecialText></SpecialText>
+                        <SpecialText style={styles.metaLabel}>Chapter: <SpecialText style={styles.metaValue}>{selectedNote.chapter}</SpecialText></SpecialText>
+                        <SpecialText style={styles.metaLabel}>Topic: <SpecialText style={styles.metaValue}>{selectedNote.topic}</SpecialText></SpecialText>
                         {selectedNote.tags && selectedNote.tags.length > 0 && (
                             <View style={styles.tagsContainer}>
-                                <Text style={styles.metaLabel}>Tags:</Text>
+                                <SpecialText style={styles.metaLabel}>Tags:</SpecialText>
                                 <View style={styles.tagsList}>
                                     {selectedNote.tags.map((tag, idx) => (
-                                        <Text key={idx} style={styles.tag}>{tag}</Text>
+                                        <SpecialText key={idx} style={styles.tag}>{tag}</SpecialText>
                                     ))}
                                 </View>
                             </View>
                         )}
-                        <Text style={styles.metaLabel}>Created: <Text style={styles.metaValue}>{new Date(selectedNote.createdAt).toLocaleDateString()}</Text></Text>
+                        <SpecialText style={styles.metaLabel}>Created: <SpecialText style={styles.metaValue}>{new Date(selectedNote.createdAt).toLocaleDateString()}</SpecialText></SpecialText>
                     </View>
 
                     <View style={styles.contentSection}>
-                        <Text style={styles.contentTitle}>Content</Text>
-                        <Text style={styles.contentText}>{selectedNote.content}</Text>
+                        <SpecialText style={styles.contentTitle}>Content</SpecialText>
+                        <SpecialText style={styles.contentText}>{selectedNote.content}</SpecialText>
                     </View>
                 </ScrollView>
 
@@ -210,9 +211,9 @@ export default function NotesScreen({ navigation }) {
                         style={styles.backButton}
                         onPress={() => setShowCreateForm(false)}
                     >
-                        <Text style={styles.backButtonText}>← Back</Text>
+                        <SpecialText style={styles.backButtonText}>← Back</SpecialText>
                     </TouchableOpacity>
-                    <Text style={styles.formTitle}>Create New Note</Text>
+                    <SpecialText style={styles.formTitle}>Create New Note</SpecialText>
                     <InfoButton
                         title={guidelines.title}
                         rules={guidelines.rules}
@@ -225,22 +226,22 @@ export default function NotesScreen({ navigation }) {
                 <ScrollView style={styles.formContainer}>
                     {/* Nomenclature Pattern Display */}
                     <View style={styles.patternCard}>
-                        <Text style={styles.patternLabel}>Suggested Format:</Text>
-                        <Text style={styles.pattern}>{nomenclature.pattern}</Text>
-                        <Text style={styles.patternExample}>Example: {nomenclature.example}</Text>
+                        <SpecialText style={styles.patternLabel}>Suggested Format:</SpecialText>
+                        <SpecialText style={styles.pattern}>{nomenclature.pattern}</SpecialText>
+                        <SpecialText style={styles.patternExample}>Example: {nomenclature.example}</SpecialText>
                     </View>
 
                     {/* Quick Guidelines */}
                     <View style={styles.guidelinesCard}>
-                        <Text style={styles.guidelinesTitle}>Quick Guidelines:</Text>
+                        <SpecialText style={styles.guidelinesTitle}>Quick Guidelines:</SpecialText>
                         {nomenclature.guidelines.slice(0, 3).map((guideline, index) => (
-                            <Text key={index} style={styles.guidelineItem}>
+                            <SpecialText key={index} style={styles.guidelineItem}>
                                 {guideline}
-                            </Text>
+                            </SpecialText>
                         ))}
                     </View>
 
-                    <Text style={styles.label}>Title * (Follow naming convention)</Text>
+                    <SpecialText style={styles.label}>Title * (Follow naming convention)</SpecialText>
                     <TextInput
                         style={styles.input}
                         placeholder={nomenclature.example}
@@ -251,7 +252,7 @@ export default function NotesScreen({ navigation }) {
                         maxLength={100}
                     />
 
-                    <Text style={styles.label}>Note Name (optional label)</Text>
+                    <SpecialText style={styles.label}>Note Name (optional label)</SpecialText>
                     <TextInput
                         style={styles.input}
                         placeholder="e.g., Quick Review, Study Guide, etc."
@@ -260,7 +261,7 @@ export default function NotesScreen({ navigation }) {
                         editable={!isLoading}
                     />
 
-                    <Text style={styles.label}>Content *</Text>
+                    <SpecialText style={styles.label}>Content *</SpecialText>
                     <TextInput
                         style={[styles.input, styles.multilineInput]}
                         placeholder="Note content"
@@ -271,7 +272,7 @@ export default function NotesScreen({ navigation }) {
                         editable={!isLoading}
                     />
 
-                    <Text style={styles.label}>Standard</Text>
+                    <SpecialText style={styles.label}>Standard</SpecialText>
                     <TextInput
                         style={styles.input}
                         placeholder="Standard (e.g., 10)"
@@ -280,7 +281,7 @@ export default function NotesScreen({ navigation }) {
                         editable={!isLoading}
                     />
 
-                    <Text style={styles.label}>Chapter</Text>
+                    <SpecialText style={styles.label}>Chapter</SpecialText>
                     <TextInput
                         style={styles.input}
                         placeholder="Chapter"
@@ -289,7 +290,7 @@ export default function NotesScreen({ navigation }) {
                         editable={!isLoading}
                     />
 
-                    <Text style={styles.label}>Topic</Text>
+                    <SpecialText style={styles.label}>Topic</SpecialText>
                     <TextInput
                         style={styles.input}
                         placeholder="Topic"
@@ -298,7 +299,7 @@ export default function NotesScreen({ navigation }) {
                         editable={!isLoading}
                     />
 
-                    <Text style={styles.label}>Tags (comma-separated)</Text>
+                    <SpecialText style={styles.label}>Tags (comma-separated)</SpecialText>
                     <TextInput
                         style={styles.input}
                         placeholder="tag1, tag2, tag3"
@@ -310,7 +311,7 @@ export default function NotesScreen({ navigation }) {
                     {isLoading && (
                         <View style={styles.loadingContainer}>
                             <ActivityIndicator size="large" color="#007AFF" />
-                            <Text style={styles.loadingText}>Creating note...</Text>
+                            <SpecialText style={styles.loadingText}>Creating note...</SpecialText>
                         </View>
                     )}
 
@@ -319,7 +320,7 @@ export default function NotesScreen({ navigation }) {
                         onPress={handleCreateNote}
                         disabled={isLoading}
                     >
-                        <Text style={styles.createButtonText}>Create Note</Text>
+                        <SpecialText style={styles.createButtonText}>Create Note</SpecialText>
                     </TouchableOpacity>
                 </ScrollView>
             </View>
@@ -330,29 +331,29 @@ export default function NotesScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>My Notes</Text>
+                <SpecialText style={styles.headerTitle}>My Notes</SpecialText>
                 <TouchableOpacity
                     style={styles.addButton}
                     onPress={() => setShowCreateForm(true)}
                 >
-                    <Text style={styles.addButtonText}>+ New</Text>
+                    <SpecialText style={styles.addButtonText}>+ New</SpecialText>
                 </TouchableOpacity>
             </View>
 
             {isLoading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#007AFF" />
-                    <Text style={styles.loadingText}>Loading notes...</Text>
+                    <SpecialText style={styles.loadingText}>Loading notes...</SpecialText>
                 </View>
             ) : notes.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No notes yet</Text>
-                    <Text style={styles.emptySubtext}>Create your first note to get started</Text>
+                    <SpecialText style={styles.emptyText}>No notes yet</SpecialText>
+                    <SpecialText style={styles.emptySubtext}>Create your first note to get started</SpecialText>
                     <TouchableOpacity
                         style={styles.emptyButton}
                         onPress={() => setShowCreateForm(true)}
                     >
-                        <Text style={styles.emptyButtonText}>Create Note</Text>
+                        <SpecialText style={styles.emptyButtonText}>Create Note</SpecialText>
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -365,16 +366,16 @@ export default function NotesScreen({ navigation }) {
                             onPress={() => setSelectedNote(item)}
                         >
                             <View style={styles.noteItemContent}>
-                                <Text style={styles.noteItemTitle}>{item.title}</Text>
-                                <Text style={styles.noteItemMeta}>
+                                <SpecialText style={styles.noteItemTitle}>{item.title}</SpecialText>
+                                <SpecialText style={styles.noteItemMeta}>
                                     {item.standard} · {item.chapter} · {item.topic}
-                                </Text>
-                                <Text style={styles.noteItemPreview} numberOfLines={2}>
+                                </SpecialText>
+                                <SpecialText style={styles.noteItemPreview} numberOfLines={2}>
                                     {item.content}
-                                </Text>
-                                <Text style={styles.noteItemDate}>
+                                </SpecialText>
+                                <SpecialText style={styles.noteItemDate}>
                                     {new Date(item.createdAt).toLocaleDateString()}
-                                </Text>
+                                </SpecialText>
                             </View>
                         </TouchableOpacity>
                     )}

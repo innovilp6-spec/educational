@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Button, StyleSheet } from 'react-native';
+import { View, Button, StyleSheet } from 'react-native';
+import SpecialText from '../components/SpecialText';
 import PrimaryButton from '../components/PrimaryButton';
 
 export default function ErrorScreen({ navigation, route }) {
@@ -7,7 +8,7 @@ export default function ErrorScreen({ navigation, route }) {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Something went wrong</Text>
+            <SpecialText style={styles.title}>Something went wrong</SpecialText>
 
             <PrimaryButton
                 title="Retry Transcription"

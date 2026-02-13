@@ -5,7 +5,6 @@ import { Provider as ReduxProvider } from 'react-redux';
 import { View } from 'react-native';
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/context/AuthContext';
-import FloatingSettingsButton from './src/components/FloatingSettingsButton';
 import store from './src/store';
 
 const Stack = createNativeStackNavigator();
@@ -18,7 +17,6 @@ export default function App() {
         <NavigationContainer>
           <View style={{ flex: 1 }}>
             <AppNavigator />
-            <FloatingSettingsButton />
           </View>
         </NavigationContainer>
       </AuthProvider>

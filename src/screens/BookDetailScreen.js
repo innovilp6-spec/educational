@@ -13,7 +13,7 @@ import { FontAwesome } from '@react-native-vector-icons/fontawesome';
 import useBookReader from '../hooks/useBookReader';
 import FloatingActionMenu from '../components/FloatingActionMenu';
 import { useAuth } from '../context/AuthContext';
-
+import SpecialText from '../components/SpecialText';
 const API_BASE = 'http://10.0.2.2:5000/api';
 
 const BookDetailScreen = ({ route, navigation }) => {
@@ -213,7 +213,7 @@ const BookDetailScreen = ({ route, navigation }) => {
             <View style={styles.container}>
                 <View style={styles.centerContainer}>
                     <ActivityIndicator size="large" color="#000" />
-                    <Text style={styles.loadingText}>Loading book...</Text>
+                    <SpecialText style={styles.loadingText}>Loading book...</SpecialText>
                 </View>
             </View>
         );
@@ -224,7 +224,7 @@ const BookDetailScreen = ({ route, navigation }) => {
             <View style={styles.container}>
                 <View style={styles.centerContainer}>
                     <FontAwesome name="exclamation-circle" size={60} color="#999" />
-                    <Text style={styles.errorText}>No content to display</Text>
+                    <SpecialText style={styles.errorText}>No content to display</SpecialText>
                 </View>
             </View>
         );
@@ -239,9 +239,9 @@ const BookDetailScreen = ({ route, navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <FontAwesome name="arrow-left" size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle} numberOfLines={1}>
+                <SpecialText style={styles.headerTitle} numberOfLines={1}>
                     {book.title}
-                </Text>
+                </SpecialText>
                 <TouchableOpacity onPress={() => Alert.alert('Info', 'Book: ' + book.title)}>
                     <FontAwesome name="info-circle" size={20} color="#000" />
                 </TouchableOpacity>
@@ -249,9 +249,9 @@ const BookDetailScreen = ({ route, navigation }) => {
 
             {/* Page Navigation */}
             <View style={styles.pageNav}>
-                <Text style={styles.pageNavText}>
+                <SpecialText style={styles.pageNavText}>
                     Page {currentPage + 1} / {totalPages} | Para {currentParagraph + 1} / {totalParagraphs}
-                </Text>
+                </SpecialText>
                 <View style={styles.pageIndicator}>
                     <View
                         style={[
@@ -268,9 +268,9 @@ const BookDetailScreen = ({ route, navigation }) => {
                 showsVerticalScrollIndicator={true}
             >
                 <View style={styles.contentBox}>
-                    <Text style={styles.contentText}>
+                    <SpecialText style={styles.contentText}>
                         {currentParagraphText}
-                    </Text>
+                    </SpecialText>
                 </View>
             </ScrollView>
 
@@ -320,9 +320,9 @@ const BookDetailScreen = ({ route, navigation }) => {
                         changeReadingMode(nextMode);
                     }}
                 >
-                    <Text style={styles.modeButtonText}>
+                    <SpecialText style={styles.modeButtonText}>
                         {readingMode === 'sentence' ? 'Sentence' : readingMode === 'paragraph' ? 'Paragraph' : 'Page'}
-                    </Text>
+                    </SpecialText>
                 </TouchableOpacity>
 
                 {/* Play/Pause Button */}

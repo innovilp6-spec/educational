@@ -18,6 +18,8 @@ import { QuizMessageBubble, QuizResultsBubble } from '../components/QuizMessageB
 import { useConfig } from '../hooks/useConfig';
 import FloatingActionMenu from '../components/FloatingActionMenu';
 import { useFocusEffect } from '@react-navigation/native';
+import FloatingSettingsButton from '../components/FloatingSettingsButton';
+import SpecialText from '../components/SpecialText';
 
 export default function AgenticCoachScreen({ route, navigation }) {
     console.log('[COACH-COMPONENT] ===== COMPONENT RENDERING =====');
@@ -595,7 +597,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
                         isErrorMessage && styles.errorMessageBubble,
                     ]}
                 >
-                    <Text
+                    <SpecialText
                         style={[
                             styles.messageText,
                             isUserMessage && styles.userMessageText,
@@ -603,7 +605,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
                         ]}
                     >
                         {message.text}
-                    </Text>
+                    </SpecialText>
                 </View>
             </View>
         );
@@ -613,7 +615,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
         return (
             <View style={styles.centerContainer}>
                 <ActivityIndicator size="large" color="#000" />
-                <Text style={styles.loadingText}>Loading coach conversation...</Text>
+                <SpecialText style={styles.loadingText}>Loading coach conversation...</SpecialText>
             </View>
         );
     }
@@ -624,27 +626,29 @@ export default function AgenticCoachScreen({ route, navigation }) {
             style={styles.container}
             keyboardVerticalOffset={80}
         >
+
+            <FloatingSettingsButton />
             {/* Header */}
             <View style={styles.header}>
                 <View style={styles.headerCenterContent}>
-                    <Text style={styles.headerTitle}>Your Coach</Text>
-                    <Text style={styles.headerSubtitle}>{currentContextName}</Text>
+                    <SpecialText style={styles.headerTitle}>Your Coach</SpecialText>
+                    <SpecialText style={styles.headerSubtitle}>{currentContextName}</SpecialText>
                 </View>
                 <TouchableOpacity
                     onPress={clearConversation}
                     style={styles.headerClearButton}
                 >
-                    <Text style={styles.clearButtonText}>Clear</Text>
+                    <SpecialText style={styles.clearButtonText}>Clear</SpecialText>
                 </TouchableOpacity>
             </View>
 
             {/* Messages */}
             {messages.length === 0 ? (
                 <View style={styles.emptyStateContainer}>
-                    <Text style={styles.emptyStateTitle}>Start Learning!</Text>
-                    <Text style={styles.emptyStateText}>
+                    <SpecialText style={styles.emptyStateTitle}>Start Learning!</SpecialText>
+                    <SpecialText style={styles.emptyStateText}>
                         Ask the coach any questions about the lecture. The coach will provide context-aware responses. You can also switch between contexts.
-                    </Text>
+                    </SpecialText>
                 </View>
             ) : (
                 <ScrollView
@@ -658,7 +662,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
 
             {/* Simplification Level Control */}
             <View style={styles.controlsContainer}>
-                <Text style={styles.controlLabel}>Simplification Level</Text>
+                <SpecialText style={styles.controlLabel}>Simplification Level</SpecialText>
                 <View style={styles.levelSelector}>
                     {[1, 2, 3, 4, 5].map(level => (
                         <TouchableOpacity
@@ -669,14 +673,14 @@ export default function AgenticCoachScreen({ route, navigation }) {
                                 simplificationLevel === level && styles.levelButtonActive,
                             ]}
                         >
-                            <Text
+                            <SpecialText
                                 style={[
                                     styles.levelButtonText,
                                     simplificationLevel === level && styles.levelButtonTextActive,
                                 ]}
                             >
                                 {level}
-                            </Text>
+                            </SpecialText>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -686,7 +690,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
             <View style={styles.inputContainer}>
                 {/* Floating Action Menu */}
                 <FloatingActionMenu
-                    key={`fab-${servicePreferences.recordingsLecture}-${servicePreferences.captureBooks}-${servicePreferences.voiceModality}`}
+                    key={`fab-${servicePreferences.recordingsLecture}-${servicePreferences.captureBooks}-${servicePreferences.voiceModality}-${servicePreferences.bionicText}`}
                     actions={[
                         servicePreferences.recordingsLecture && {
                             icon: '🎙️',
@@ -711,7 +715,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
                     ].filter(Boolean)}
                 />
 
-                {/* Text Input */}
+                {/* SpecialText Input */}
                 <TextInput
                     style={styles.textInput}
                     placeholder="Ask a question..."
@@ -763,8 +767,8 @@ export default function AgenticCoachScreen({ route, navigation }) {
             >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Switch Context</Text>
-                        <Text style={styles.modalSubtitle}>Select which context you'd like to study:</Text>
+                        <SpecialText style={styles.modalTitle}>Switch Context</SpecialText>
+                        <SpecialText style={styles.modalSubtitle}>Select which context you'd like to study:</SpecialText>
 
                         <FlatList
                             data={contextSuggestions}
@@ -776,16 +780,16 @@ export default function AgenticCoachScreen({ route, navigation }) {
                                     disabled={isDetectingHint || pendingContextSwitch?.loading}
                                 >
                                     <View style={styles.contextOptionContent}>
-                                        <Text style={styles.contextOptionIcon}>{item.icon || '📚'}</Text>
+                                        <SpecialText style={styles.contextOptionIcon}>{item.icon || '📚'}</SpecialText>
                                         <View style={styles.contextOptionText}>
-                                            <Text style={styles.contextOptionName}>{item.name}</Text>
-                                            <Text style={styles.contextOptionDescription}>
+                                            <SpecialText style={styles.contextOptionName}>{item.name}</SpecialText>
+                                            <SpecialText style={styles.contextOptionDescription}>
                                                 {item.description || `Study with ${item.contextType} coach`}
-                                            </Text>
+                                            </SpecialText>
                                         </View>
                                     </View>
                                     {item.isCurrentContext && (
-                                        <Text style={styles.currentBadge}>Current</Text>
+                                        <SpecialText style={styles.currentBadge}>Current</SpecialText>
                                     )}
                                 </TouchableOpacity>
                             )}
@@ -800,7 +804,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
                                 setMessages(prev => prev.filter(m => !m.id?.startsWith('hint-detected')));
                             }}
                         >
-                            <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                            <SpecialText style={styles.modalCancelButtonText}>Cancel</SpecialText>
                         </TouchableOpacity>
                     </View>
                 </View>

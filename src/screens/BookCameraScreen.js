@@ -16,6 +16,7 @@ import { FontAwesome } from '@react-native-vector-icons/fontawesome';
 import RNFS from 'react-native-fs';
 import InfoButton from '../components/InfoButton';
 import { NAMING_NOMENCLATURE, DETAILED_GUIDELINES, validateName } from '../utils/namingNomenclature';
+import SpecialText from '../components/SpecialText';
 
 const BookCameraScreen = ({ navigation }) => {
     const [capturedImages, setCapturedImages] = useState([]);
@@ -57,9 +58,9 @@ const BookCameraScreen = ({ navigation }) => {
             <View style={styles.container}>
                 <View style={styles.centerContent}>
                     <FontAwesome name="camera" size={60} color="#999" />
-                    <Text style={styles.errorText}>Camera permission not granted</Text>
+                    <SpecialText style={styles.errorText}>Camera permission not granted</SpecialText>
                     <TouchableOpacity style={styles.button} onPress={handleRequestPermission}>
-                        <Text style={styles.buttonText}>Grant Permission</Text>
+                        <SpecialText style={styles.buttonText}>Grant Permission</SpecialText>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -71,7 +72,7 @@ const BookCameraScreen = ({ navigation }) => {
             <View style={styles.container}>
                 <View style={styles.centerContent}>
                     <ActivityIndicator size="large" color="#fff" />
-                    <Text style={styles.errorText}>Loading camera...</Text>
+                    <SpecialText style={styles.errorText}>Loading camera...</SpecialText>
                 </View>
             </View>
         );
@@ -82,7 +83,7 @@ const BookCameraScreen = ({ navigation }) => {
             <View style={styles.container}>
                 <View style={styles.centerContent}>
                     <FontAwesome name="camera" size={60} color="#999" />
-                    <Text style={styles.errorText}>Camera device not available</Text>
+                    <SpecialText style={styles.errorText}>Camera device not available</SpecialText>
                 </View>
             </View>
         );
@@ -216,10 +217,10 @@ const BookCameraScreen = ({ navigation }) => {
                     }}
                 />
                 <View style={styles.overlay}>
-                    <Text style={styles.overlayText}>Capture Book Pages</Text>
-                    <Text style={styles.pageCountText}>
+                    <SpecialText style={styles.overlayText}>Capture Book Pages</SpecialText>
+                    <SpecialText style={styles.pageCountText}>
                         Pages: {capturedImages.length}
-                    </Text>
+                    </SpecialText>
                 </View>
             </View>
 
@@ -229,9 +230,9 @@ const BookCameraScreen = ({ navigation }) => {
                 <View style={styles.infoRow}>
                     <View style={styles.pageIndicator}>
                         <FontAwesome name="images" size={16} color="#fff" />
-                        <Text style={styles.pageIndicatorText}>
+                        <SpecialText style={styles.pageIndicatorText}>
                             {capturedImages.length} page{capturedImages.length !== 1 ? 's' : ''}
-                        </Text>
+                        </SpecialText>
                     </View>
                     {capturedImages.length > 0 && (
                         <TouchableOpacity
@@ -239,7 +240,7 @@ const BookCameraScreen = ({ navigation }) => {
                             onPress={clearCaptures}
                         >
                             <FontAwesome name="trash" size={16} color="#FF6B6B" />
-                            <Text style={styles.clearButtonText}>Clear</Text>
+                            <SpecialText style={styles.clearButtonText}>Clear</SpecialText>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -259,14 +260,14 @@ const BookCameraScreen = ({ navigation }) => {
                             size={24}
                             color={canCapture ? '#fff' : 'rgba(255,255,255,0.5)'}
                         />
-                        <Text
+                        <SpecialText
                             style={[
                                 styles.buttonText,
                                 !canCapture && styles.disabledButtonText,
                             ]}
                         >
                             Capture
-                        </Text>
+                        </SpecialText>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -280,7 +281,7 @@ const BookCameraScreen = ({ navigation }) => {
                         {isProcessing ? (
                             <>
                                 <ActivityIndicator color="#fff" size="small" />
-                                <Text style={styles.buttonText}>Processing...</Text>
+                                <SpecialText style={styles.buttonText}>Processing...</SpecialText>
                             </>
                         ) : (
                             <>
@@ -293,7 +294,7 @@ const BookCameraScreen = ({ navigation }) => {
                                             : 'rgba(255,255,255,0.5)'
                                     }
                                 />
-                                <Text
+                                <SpecialText
                                     style={[
                                         styles.buttonText,
                                         capturedImages.length > 0 && { color: '#000' },
@@ -301,18 +302,18 @@ const BookCameraScreen = ({ navigation }) => {
                                     ]}
                                 >
                                     Process
-                                </Text>
+                                </SpecialText>
                             </>
                         )}
                     </TouchableOpacity>
                 </View>
 
                 {/* Help text */}
-                <Text style={styles.helpText}>
+                <SpecialText style={styles.helpText}>
                     {capturedImages.length === 0
                         ? 'Tap Capture to take photos'
                         : 'Tap Process to extract text'}
-                </Text>
+                </SpecialText>
             </View>
 
             {/* Title Input Modal */}
@@ -325,7 +326,7 @@ const BookCameraScreen = ({ navigation }) => {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Book Title</Text>
+                            <SpecialText style={styles.modalTitle}>Book Title</SpecialText>
                             <InfoButton
                                 title={DETAILED_GUIDELINES.book.title}
                                 rules={DETAILED_GUIDELINES.book.rules}
@@ -338,25 +339,25 @@ const BookCameraScreen = ({ navigation }) => {
                         <ScrollView style={styles.modalScrollView}>
                             {/* Nomenclature Pattern */}
                             <View style={styles.patternCard}>
-                                <Text style={styles.patternLabel}>Suggested Format:</Text>
-                                <Text style={styles.pattern}>{NAMING_NOMENCLATURE.book.pattern}</Text>
-                                <Text style={styles.patternExample}>Example: {NAMING_NOMENCLATURE.book.example}</Text>
+                                <SpecialText style={styles.patternLabel}>Suggested Format:</SpecialText>
+                                <SpecialText style={styles.pattern}>{NAMING_NOMENCLATURE.book.pattern}</SpecialText>
+                                <SpecialText style={styles.patternExample}>Example: {NAMING_NOMENCLATURE.book.example}</SpecialText>
                             </View>
 
                             {/* Quick Guidelines */}
                             <View style={styles.guidelinesCard}>
-                                <Text style={styles.guidelinesTitle}>Quick Guidelines:</Text>
+                                <SpecialText style={styles.guidelinesTitle}>Quick Guidelines:</SpecialText>
                                 {NAMING_NOMENCLATURE.book.guidelines.slice(0, 3).map((guideline, index) => (
-                                    <Text key={index} style={styles.guidelineItem}>
+                                    <SpecialText key={index} style={styles.guidelineItem}>
                                         {guideline}
-                                    </Text>
+                                    </SpecialText>
                                 ))}
                             </View>
 
                             <View style={styles.modalBody}>
-                                <Text style={styles.modalLabel}>
+                                <SpecialText style={styles.modalLabel}>
                                     What would you like to name this captured book?
-                                </Text>
+                                </SpecialText>
                                 <TextInput
                                     style={styles.titleInput}
                                     placeholder={NAMING_NOMENCLATURE.book.example}
@@ -366,9 +367,9 @@ const BookCameraScreen = ({ navigation }) => {
                                     autoFocus={true}
                                     maxLength={100}
                                 />
-                                <Text style={styles.charCount}>
+                                <SpecialText style={styles.charCount}>
                                     {bookTitle.length}/100 characters
-                                </Text>
+                                </SpecialText>
                             </View>
                         </ScrollView>
 
@@ -377,7 +378,7 @@ const BookCameraScreen = ({ navigation }) => {
                                 style={styles.cancelButton}
                                 onPress={handleTitleCancel}
                             >
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                                <SpecialText style={styles.cancelButtonText}>Cancel</SpecialText>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[
@@ -387,14 +388,14 @@ const BookCameraScreen = ({ navigation }) => {
                                 onPress={handleTitleConfirm}
                                 disabled={!bookTitle.trim()}
                             >
-                                <Text
+                                <SpecialText
                                     style={[
                                         styles.confirmButtonText,
                                         !bookTitle.trim() && styles.disabledConfirmButtonText,
                                     ]}
                                 >
                                     Continue
-                                </Text>
+                                </SpecialText>
                             </TouchableOpacity>
                         </View>
                     </View>

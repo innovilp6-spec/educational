@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
-import PrimaryButton from '../components/PrimaryButton';
+import FloatingActionMenu from '../components/FloatingActionMenu';
+import SpecialText from '../components/SpecialText';
 
 export default function AgenticNotesScreen({ route, navigation }) {
     const { transcriptId, sessionName, transcript } = route.params || {};
@@ -111,7 +112,7 @@ ${(currentNote.conversationHistory || [])
     const loadNotesList = async () => {
         try {
             setIsLoadingHistory(true);
-            console.log('Loading user agentic notes...');
+            console.log('Loading user notes...');
 
             const notesList = await agenticGetUserNotes();
             console.log('Notes list retrieved:', notesList);
@@ -192,7 +193,7 @@ ${(currentNote.conversationHistory || [])
 
             if (!currentNoteId) {
                 // Create new note from transcript or standalone
-                console.log('Creating new agentic note...');
+                console.log('Creating new note...');
                 response = await agenticCreateNote({
                     content: transcript || userMessage,
                     standard: '10',
@@ -280,7 +281,7 @@ ${(currentNote.conversationHistory || [])
         return (
             <View style={styles.container}>
                 <View style={styles.headerContainer}>
-                    <Text style={styles.header}>Agentic Notes</Text>
+                    <SpecialText style={styles.header}>Notes</SpecialText>
                     <TouchableOpacity
                         style={styles.refreshButton}
                         onPress={loadNotesList}
@@ -293,17 +294,17 @@ ${(currentNote.conversationHistory || [])
                 {isLoadingHistory ? (
                     <View style={styles.centerContainer}>
                         <ActivityIndicator size="large" color="#000000" />
-                        <Text style={styles.loadingText}>Loading notes...</Text>
+                        <SpecialText style={styles.loadingText}>Loading notes...</SpecialText>
                     </View>
                 ) : notes.length === 0 ? (
                     <View style={styles.centerContainer}>
-                        <Text style={styles.emptyText}>No notes yet</Text>
-                        <Text style={styles.emptySubtext}>Start a conversation to create a note</Text>
+                        <SpecialText style={styles.emptyText}>No notes yet</SpecialText>
+                        <SpecialText style={styles.emptySubtext}>Start a conversation to create a note</SpecialText>
                         <TouchableOpacity
                             style={styles.startButton}
                             onPress={() => setShowNotesList(false)}
                         >
-                            <Text style={styles.startButtonText}>Start New Note</Text>
+                            <SpecialText style={styles.startButtonText}>Start New Note</SpecialText>
                         </TouchableOpacity>
                     </View>
                 ) : (
@@ -316,18 +317,18 @@ ${(currentNote.conversationHistory || [])
                                 onPress={() => handleSelectNote(item)}
                             >
                                 <View style={styles.noteItemContent}>
-                                    <Text style={styles.noteItemTitle}>{item.title}</Text>
-                                    <Text style={styles.noteItemMeta}>
+                                    <SpecialText style={styles.noteItemTitle}>{item.title}</SpecialText>
+                                    <SpecialText style={styles.noteItemMeta}>
                                         {item.standard} • {item.topic}
-                                    </Text>
-                                    <Text style={styles.noteItemPreview} numberOfLines={2}>
+                                    </SpecialText>
+                                    {/* <SpecialText style={styles.noteItemPreview} numberOfLines={2}>
                                         {item.content}
-                                    </Text>
-                                    <Text style={styles.noteItemDate}>
+                                    </SpecialText> */}
+                                    <SpecialText style={styles.noteItemDate}>
                                         v{item.version || 1} • {new Date(item.createdAt).toLocaleDateString()}
-                                    </Text>
+                                    </SpecialText>
                                 </View>
-                                <Text style={styles.noteArrow}>›</Text>
+                                <SpecialText style={styles.noteArrow}>›</SpecialText>
                             </TouchableOpacity>
                         )}
                         contentContainerStyle={styles.notesList}
@@ -345,18 +346,18 @@ ${(currentNote.conversationHistory || [])
                     style={styles.backButton}
                     onPress={() => setShowNotesList(true)}
                 >
-                    <Text style={styles.backButtonText}>← Back</Text>
+                    <SpecialText style={styles.backButtonText}>← Back</SpecialText>
                 </TouchableOpacity>
-                <Text style={styles.conversationTitle}>
+                <SpecialText style={styles.conversationTitle}>
                     {currentNote ? currentNote.title : 'New Note'}
-                </Text>
+                </SpecialText>
                 <View style={styles.headerButtonsGroup}>
                     <TouchableOpacity
                         style={styles.exportButton}
                         onPress={exportNoteAsText}
                         disabled={isLoading}
                     >
-                        <Text style={styles.exportButtonText}>Export</Text>
+                        <SpecialText style={styles.exportButtonText}>Export</SpecialText>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -364,7 +365,7 @@ ${(currentNote.conversationHistory || [])
             {isLoadingHistory ? (
                 <View style={styles.centerContainer}>
                     <ActivityIndicator size="large" color="#000000" />
-                    <Text style={styles.loadingText}>Loading conversation...</Text>
+                    <SpecialText style={styles.loadingText}>Loading conversation...</SpecialText>
                 </View>
             ) : (
                 <>
@@ -375,34 +376,34 @@ ${(currentNote.conversationHistory || [])
                     >
                         {currentNote && (
                             <View style={styles.noteContentSection}>
-                                <Text style={styles.sectionTitle}>📖 Note Content</Text>
+                                <SpecialText style={styles.sectionTitle}><Text>📖</Text> Note Content</SpecialText>
                                 <ScrollView style={styles.noteContentBox} nestedScrollEnabled={true}>
                                     <View style={styles.noteMetadata}>
                                         <View style={styles.metaRow}>
-                                            <Text style={styles.metaLabel}>Standard:</Text>
-                                            <Text style={styles.metaValue}>{currentNote.standard}</Text>
+                                            <SpecialText style={styles.metaLabel}>Standard:</SpecialText>
+                                            <SpecialText style={styles.metaValue}>{currentNote.standard}</SpecialText>
                                         </View>
                                         <View style={styles.metaRow}>
-                                            <Text style={styles.metaLabel}>Chapter:</Text>
-                                            <Text style={styles.metaValue}>{currentNote.chapter}</Text>
+                                            <SpecialText style={styles.metaLabel}>Chapter:</SpecialText>
+                                            <SpecialText style={styles.metaValue}>{currentNote.chapter}</SpecialText>
                                         </View>
                                         <View style={styles.metaRow}>
-                                            <Text style={styles.metaLabel}>Topic:</Text>
-                                            <Text style={styles.metaValue}>{currentNote.topic}</Text>
+                                            <SpecialText style={styles.metaLabel}>Topic:</SpecialText>
+                                            <SpecialText style={styles.metaValue}>{currentNote.topic}</SpecialText>
                                         </View>
                                         <View style={styles.metaRow}>
-                                            <Text style={styles.metaLabel}>Version:</Text>
-                                            <Text style={styles.metaValue}>v{currentNote.version || 1}</Text>
+                                            <SpecialText style={styles.metaLabel}>Version:</SpecialText>
+                                            <SpecialText style={styles.metaValue}>v{currentNote.version || 1}</SpecialText>
                                         </View>
                                     </View>
                                     <View style={styles.divider} />
-                                    <Text style={styles.noteContentText}>{currentNote.content}</Text>
+                                    <SpecialText style={styles.noteContentText}>{currentNote.content}</SpecialText>
                                 </ScrollView>
                             </View>
                         )}
 
                         <View style={styles.conversationSection}>
-                            <Text style={styles.sectionTitle}>💬 Conversation History</Text>
+                            <SpecialText style={styles.sectionTitle}><Text>💬</Text> Conversation History</SpecialText>
                             {messages.map((msg) => (
                                 <View
                                     key={msg.id}
@@ -414,7 +415,7 @@ ${(currentNote.conversationHistory || [])
                                                     styles.systemBubble
                                     ]}
                                 >
-                                    <Text
+                                    <SpecialText
                                         style={[
                                             styles.messageText,
                                             msg.type === 'user' ? styles.userText :
@@ -424,13 +425,13 @@ ${(currentNote.conversationHistory || [])
                                         ]}
                                     >
                                         {msg.text}
-                                    </Text>
+                                    </SpecialText>
                                 </View>
                             ))}
                         </View>
                     </ScrollView>
 
-                    {currentNoteId && currentNote && (
+                    {/* {currentNoteId && currentNote && (
                         <View style={styles.buttonContainer}>
                             <PrimaryButton 
                                 title="Study with Coach" 
@@ -449,38 +450,74 @@ ${(currentNote.conversationHistory || [])
                                 }}
                             />
                         </View>
-                    )}
+                    )} */}
 
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                         style={styles.inputContainer}
+                        keyboardVerticalOffset={80}
                     >
-                        <View style={styles.inputRow}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder={
-                                    currentNoteId
-                                        ? "Edit or add to note... (e.g., 'Add a section on...', 'Change the title to...')"
-                                        : "Describe your note... (e.g., 'Create notes on photosynthesis')"
-                                }
-                                value={userInput}
-                                onChangeText={setUserInput}
-                                editable={!isLoading}
-                                multiline={true}
-                                maxLength={500}
-                            />
+                        {/* Floating Action Menu */}
+                        <FloatingActionMenu
+                            actions={[
+                                {
+                                    icon: '🧠',
+                                    label: 'Coach',
+                                    onPress: () => {
+                                        if (currentNoteId && currentNote) {
+                                            navigation.navigate('AgenticCoach', {
+                                                transcriptId: currentNoteId,
+                                                sessionName: currentNote.title,
+                                                contextType: 'note',
+                                                transcript: currentNote.content,
+                                            });
+                                        }
+                                    },
+                                },
+                            ]}
+                        />
+
+                        {/* SpecialText Input */}
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder={
+                                currentNoteId
+                                    ? "Edit or add to note..."
+                                    : "Describe your note..."
+                            }
+                            placeholderTextColor="#999"
+                            value={userInput}
+                            onChangeText={setUserInput}
+                            editable={!isLoading}
+                            multiline
+                            maxLength={500}
+                        />
+
+                        {/* Send Button or Mic Button */}
+                        {userInput.trim() ? (
                             <TouchableOpacity
-                                style={[styles.sendButton, isLoading && styles.sendButtonDisabled]}
                                 onPress={handleSendMessage}
-                                disabled={isLoading || !userInput.trim()}
+                                disabled={isLoading}
+                                style={[
+                                    styles.sendButton,
+                                    isLoading && styles.sendButtonDisabled,
+                                ]}
                             >
                                 {isLoading ? (
                                     <ActivityIndicator size="small" color="#fff" />
                                 ) : (
-                                    <Text style={styles.sendButtonText}>Send</Text>
+                                    <SpecialText style={styles.sendButtonText}>⬆</SpecialText>
                                 )}
                             </TouchableOpacity>
-                        </View>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.micButton}
+                                disabled={isLoading}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.micButtonIcon}>🎤</Text>
+                            </TouchableOpacity>
+                        )}
                     </KeyboardAvoidingView>
                 </>
             )}
@@ -699,42 +736,53 @@ const styles = StyleSheet.create({
     },
     inputContainer: {
         backgroundColor: '#fff',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         borderTopWidth: 1,
         borderTopColor: '#eee',
-        padding: 12,
-    },
-    inputRow: {
         flexDirection: 'row',
         alignItems: 'flex-end',
         gap: 8,
     },
-    input: {
+    textInput: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
         paddingHorizontal: 12,
         paddingVertical: 10,
         fontSize: 14,
-        color: '#333',
         maxHeight: 100,
     },
     sendButton: {
-        backgroundColor: '#000000',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
+        backgroundColor: '#000',
         borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
         justifyContent: 'center',
         alignItems: 'center',
+        minHeight: 40,
+        minWidth: 40,
     },
     sendButtonDisabled: {
+        backgroundColor: '#ccc',
         opacity: 0.6,
     },
     sendButtonText: {
         color: '#fff',
+        fontSize: 18,
         fontWeight: '600',
-        fontSize: 14,
+    },
+    micButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 8,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    micButtonIcon: {
+        fontSize: 20,
     },
     headerButtonsGroup: {
         flexDirection: 'row',

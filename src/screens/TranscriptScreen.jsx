@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
+import SpecialText from '../components/SpecialText';
 
 export default function TranscriptScreen({ route }) {
   const { transcript } = route.params;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.heading}>Lecture Transcript</Text>
-      <Text style={styles.text}>{transcript}</Text>
+      <SpecialText style={styles.heading}>Lecture Transcript</SpecialText>
+      <SpecialText style={styles.text}>{transcript}</SpecialText>
     </ScrollView>
   );
 }

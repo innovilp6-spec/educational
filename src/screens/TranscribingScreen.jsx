@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import SpecialText from '../components/SpecialText';
 
 export default function TranscribingScreen({ route, navigation }) {
   const { masterTranscript } = route.params;
@@ -37,8 +38,8 @@ export default function TranscribingScreen({ route, navigation }) {
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#1976d2" />
-      <Text style={styles.text}>Processing transcript…</Text>
-      <Text style={styles.subText}>Resolving word overlaps and optimizing text...</Text>
+      <SpecialText style={styles.text}>Processing transcript…</SpecialText>
+      <SpecialText style={styles.subText}>Resolving word overlaps and optimizing text...</SpecialText>
     </View>
   );
 }

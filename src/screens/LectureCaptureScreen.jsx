@@ -4,6 +4,7 @@ import useTranscriptAPI from '../hooks/useTranscriptAPI';
 import PrimaryButton from '../components/PrimaryButton';
 import RNFS from 'react-native-fs';
 import { requestReadExternalStoragePermission } from '../utils/permissions';
+import SpecialText from '../components/SpecialText';
 
 const CHUNK_INTERVAL = 2000; // 2 seconds between chunk processing (simulation)
 // Use Downloads directory to access the audio chunks
@@ -256,13 +257,13 @@ export default function LectureCaptureScreen({ navigation }) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Recording Lecture</Text>
+        <SpecialText style={styles.headerTitle}>Recording Lecture</SpecialText>
         {!isRecording && (
           <TouchableOpacity
             style={styles.viewRecordingsButton}
             onPress={() => navigation.navigate('RecordingsList')}
           >
-            <Text style={styles.viewRecordingsButtonText}>📋 View Recordings</Text>
+            <SpecialText style={styles.viewRecordingsButtonText}><Text>📋</Text> View Recordings</SpecialText>
           </TouchableOpacity>
         )}
       </View>
@@ -270,14 +271,14 @@ export default function LectureCaptureScreen({ navigation }) {
       {isLoadingFiles && (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Preparing...</Text>
+          <SpecialText style={styles.loadingText}>Preparing...</SpecialText>
         </View>
       )}
 
       {!isLoadingFiles && audioFiles.length === 0 && !isRecording && (
         <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>⚠️ No audio files found</Text>
-          <Text style={styles.errorSubtext}>Please add audio files to Downloads folder</Text>
+          <SpecialText style={styles.errorText}><Text>⚠️</Text> No audio files found</SpecialText>
+          <SpecialText style={styles.errorSubtext}>Please add audio files to Downloads folder</SpecialText>
         </View>
       )}
 
@@ -296,18 +297,18 @@ export default function LectureCaptureScreen({ navigation }) {
               {/* Status Indicator */}
               <View style={styles.statusIndicator}>
                 <View style={styles.recordingDot} />
-                <Text style={styles.recordingText}>Recording</Text>
+                <SpecialText style={styles.recordingText}>Recording</SpecialText>
               </View>
 
               {/* Chunk Counter */}
-              <Text style={styles.chunkCounter}>{chunkCount} chunks</Text>
+              <SpecialText style={styles.chunkCounter}>{chunkCount} chunks</SpecialText>
             </View>
           )}
 
           {/* Live Transcript Box */}
           <View style={styles.liveTranscriptContainer}>
             <View style={styles.liveTranscriptHeader}>
-              <Text style={styles.liveTranscriptTitle}>Live Transcript</Text>
+              <SpecialText style={styles.liveTranscriptTitle}>Live Transcript</SpecialText>
               {isProcessingChunk && (
                 <View style={styles.processingIndicator}>
                   <ActivityIndicator size="small" color="#007AFF" />
@@ -323,16 +324,16 @@ export default function LectureCaptureScreen({ navigation }) {
               {currentChunkTranscript ? (
                 <View style={styles.transcriptContent}>
                   {masterTranscript && (
-                    <Text style={styles.pastTranscript}>{masterTranscript}</Text>
+                    <SpecialText style={styles.pastTranscript}>{masterTranscript}</SpecialText>
                   )}
                   <View style={styles.currentTranscriptHighlight}>
-                    <Text style={styles.currentTranscript}>{currentChunkTranscript}</Text>
+                    <SpecialText style={styles.currentTranscript}>{currentChunkTranscript}</SpecialText>
                   </View>
                 </View>
               ) : (
-                <Text style={styles.placeholderText}>
+                <SpecialText style={styles.placeholderText}>
                   {isRecording ? 'Listening...' : 'Click record to start'}
-                </Text>
+                </SpecialText>
               )}
             </ScrollView>
           </View>
@@ -359,9 +360,9 @@ export default function LectureCaptureScreen({ navigation }) {
           {/* Transcript Stats */}
           {masterTranscript.length > 0 && (
             <View style={styles.statsContainer}>
-              <Text style={styles.statsText}>
+              <SpecialText style={styles.statsText}>
                 {masterTranscript.length} characters • {masterTranscript.split(' ').length} words
-              </Text>
+              </SpecialText>
             </View>
           )}
         </View>

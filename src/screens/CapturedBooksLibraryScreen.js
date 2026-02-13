@@ -12,6 +12,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@react-native-vector-icons/fontawesome';
 import { useAuth } from '../context/AuthContext';
+import SpecialText from '../components/SpecialText';
 
 const API_BASE = 'http://10.0.2.2:5000/api';
 
@@ -133,12 +134,12 @@ const CapturedBooksLibraryScreen = ({ navigation }) => {
                 />
             )}
             <View style={styles.bookInfo}>
-                <Text style={styles.bookTitle} numberOfLines={2}>
+                <SpecialText style={styles.bookTitle} numberOfLines={2}>
                     {item.title}
-                </Text>
+                </SpecialText>
                 <View style={styles.bookMetadata}>
-                    <Text style={styles.metaText}>{item.totalPages} pages</Text>
-                    <Text style={styles.metaText}>{item.averageConfidence}% OCR</Text>
+                    <SpecialText style={styles.metaText}>{item.totalPages} pages</SpecialText>
+                    <SpecialText style={styles.metaText}>{item.averageConfidence}% OCR</SpecialText>
                 </View>
                 <View style={styles.progressContainer}>
                     <View
@@ -148,10 +149,10 @@ const CapturedBooksLibraryScreen = ({ navigation }) => {
                         ]}
                     />
                 </View>
-                <Text style={styles.lastReadText}>
+                <SpecialText style={styles.lastReadText}>
                     Last read:{' '}
                     {new Date(item.lastReadAt || item.createdAt).toLocaleDateString()}
-                </Text>
+                </SpecialText>
             </View>
             <TouchableOpacity
                 style={styles.deleteButton}
@@ -167,7 +168,7 @@ const CapturedBooksLibraryScreen = ({ navigation }) => {
             <View style={styles.container}>
                 <View style={styles.centerContainer}>
                     <ActivityIndicator size="large" color="#000" />
-                    <Text style={styles.loadingText}>Loading books...</Text>
+                    <SpecialText style={styles.loadingText}>Loading books...</SpecialText>
                 </View>
             </View>
         );
@@ -177,7 +178,7 @@ const CapturedBooksLibraryScreen = ({ navigation }) => {
         <View style={styles.container}>
             {/* Header with Camera Button */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>My Captured Books</Text>
+                <SpecialText style={styles.headerTitle}>My Captured Books</SpecialText>
                 <TouchableOpacity
                     style={styles.cameraButton}
                     onPress={() => navigation.navigate('BookCamera')}
@@ -190,10 +191,10 @@ const CapturedBooksLibraryScreen = ({ navigation }) => {
             {books.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <FontAwesome name="book" size={80} color="rgba(0,0,0,0.2)" />
-                    <Text style={styles.emptyText}>No captured books yet</Text>
-                    <Text style={styles.emptySubtext}>
+                    <SpecialText style={styles.emptyText}>No captured books yet</SpecialText>
+                    <SpecialText style={styles.emptySubtext}>
                         Tap the camera button to capture pages
-                    </Text>
+                    </SpecialText>
                 </View>
             ) : (
                 <FlatList
