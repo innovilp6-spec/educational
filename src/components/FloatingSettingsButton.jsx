@@ -17,12 +17,23 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useConfig } from '../hooks/useConfig';
 import { useAuth } from '../context/AuthContext';
 import PrimaryButton from './PrimaryButton';
+import SpecialText from './SpecialText';
+import { Picker } from '@react-native-picker/picker';
+import apiService from '../services/apiService';
+
 
 export default function FloatingSettingsButton() {
+  const navigation = useNavigation();
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [selectedGrade, setSelectedGrade] = useState('10');
+  const [isUpdatingGrade, setIsUpdatingGrade] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  
   const {
     servicePreferences,
     updateServicePreference,
@@ -32,7 +43,120 @@ export default function FloatingSettingsButton() {
     isLoading,
     error,
   } = useConfig();
-  const { getUserEmail } = useAuth();
+  const { getUserEmail, logout, getUserName } = useAuth();
+
+  console.log('[FloatingSettingsButton] Rendered with name', getUserName());
+  const grades = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+
+  const handleGradeChange = (newGrade) => {
+    Alert.alert(
+      'Confirm Grade Change',
+      `Change grade to ${newGrade}?`,
+      [
+        { text: 'Cancel', onPress: () => { }, style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            await updateGradeOnServer(newGrade);
+          },
+          style: 'default',
+        },
+      ]
+    );
+  };
+
+  const updateGradeOnServer = async (newGrade) => {
+    try {
+      setIsUpdatingGrade(true);
+      const userEmail = getUserEmail();
+
+      if (!userEmail) {
+        Alert.alert('Error', 'User email not found');
+        return;
+      }
+
+      const response = await apiService.updateGrade(userEmail, newGrade);
+
+      if (response.success) {
+        setSelectedGrade(newGrade);
+        Alert.alert('Success', `Grade updated to ${newGrade}`);
+        console.log('[FloatingSettingsButton] Grade updated:', response);
+      } else {
+        Alert.alert('Error', response.message || 'Failed to update grade');
+      }
+    } catch (error) {
+      console.error('[FloatingSettingsButton] Error updating grade:', error);
+      Alert.alert('Error', 'Failed to update grade. Please try again.');
+    } finally {
+      setIsUpdatingGrade(false);
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', onPress: () => { }, style: 'cancel' },
+        {
+          text: 'Logout',
+          onPress: async () => {
+            await performLogout();
+            console.log('[FloatingSettingsButton] User logged out, navigating to Login screen');
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
+  const performLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      const userEmail = getUserEmail();
+
+      if (!userEmail) {
+        await logout();
+        setSettingsVisible(false);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+        return;
+      }
+
+      // Call backend logout endpoint for audit logging
+      const response = await apiService.logoutUser(userEmail);
+
+      // Proceed with client-side logout regardless of backend response
+      await logout();
+      setSettingsVisible(false);
+      
+      // Reset navigation stack and navigate to Login
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+      console.log('[FloatingSettingsButton] User logged out successfully');
+    } catch (error) {
+      console.error('[FloatingSettingsButton] Logout error:', error);
+      // Still perform client-side logout even if server call fails
+      await logout();
+      setSettingsVisible(false);
+      
+      // Navigate to Login even if there's an error
+      try {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      } catch (navError) {
+        console.error('[FloatingSettingsButton] Navigation error:', navError);
+      }
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const toggleServicePreference = async (preference) => {
     try {
@@ -75,7 +199,7 @@ export default function FloatingSettingsButton() {
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Service Preferences</Text>
+            <SpecialText style={styles.modalTitle}>Profile Actions</SpecialText>
             <TouchableOpacity
               onPress={() => setSettingsVisible(false)}
               disabled={isLoading}
@@ -86,115 +210,194 @@ export default function FloatingSettingsButton() {
 
           {error && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>⚠️ {error}</Text>
+              <SpecialText style={styles.errorText}><Text>⚠️</Text> {error}</SpecialText>
             </View>
           )}
 
           <ScrollView style={styles.modalContent}>
-            <Text style={styles.description}>
-              Customize which services you want to access on this device. Changes are saved immediately.
-            </Text>
+            {/* PROFILE SECTION - SINGLE CARD */}
+            <View style={styles.profileCard}>
+              <SpecialText style={styles.sectionTitle}><Text>👤</Text> Profile</SpecialText>
 
-            {/* Recording Lectures */}
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceContent}>
-                <Text style={styles.preferenceIcon}>🎙️</Text>
-                <View style={styles.preferenceText}>
-                  <Text style={styles.preferenceName}>Record Lectures</Text>
-                  <Text style={styles.preferenceDescription}>
-                    Record and transcribe lectures with automatic transcription
-                  </Text>
+              <View style={styles.cardDivider} />
+
+              <View style={styles.cardRow}>
+                <SpecialText style={styles.cardLabel}>Name</SpecialText>
+                <SpecialText
+                  style={styles.cardValue}
+                >{getUserName() || 'Name'}</SpecialText>
+              </View>
+
+              <View style={styles.cardDivider} />
+
+              <View style={styles.cardRow}>
+                <SpecialText style={styles.cardLabel}>Email</SpecialText>
+                <SpecialText
+                  style={styles.cardValue}
+                >{getUserEmail() || 'Email'}</SpecialText>
+              </View>
+            </View>
+
+            {/* EDUCATION LEVEL SECTION - SINGLE CARD */}
+            <View style={styles.educationCard}>
+              <SpecialText style={styles.sectionTitle}><Text>📚</Text> Education Level</SpecialText>
+
+              <View style={styles.cardDivider} />
+
+              <View style={styles.gradePickerWrapper}>
+                <SpecialText style={styles.cardLabel}>Grade</SpecialText>
+                <SpecialText
+                  style={styles.cardValue}
+                >{`In Grade ${selectedGrade}`}</SpecialText>
+              </View>
+
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={selectedGrade}
+                  onValueChange={(itemValue) => handleGradeChange(itemValue)}
+                  style={styles.picker}
+                  enabled={!isUpdatingGrade}
+                >
+                  {grades.map((grade) => (
+                    <Picker.Item key={grade} label={`Grade ${grade}`} value={grade} />
+                  ))}
+                </Picker>
+                {isUpdatingGrade && (
+                  <ActivityIndicator size="small" color="#4caf50" style={{ marginVertical: 8 }} />
+                )}
+              </View>
+            </View>
+
+            {/* SERVICE PREFERENCES SECTION */}
+            <View style={styles.educationCard}>
+              <SpecialText style={styles.sectionTitle}><Text>⚙️</Text> Service Preferences</SpecialText>
+
+              <SpecialText
+                style={styles.description}
+              >Customize which services you want to access on this device. Changes are saved immediately.</SpecialText>
+
+              {/* Recording Lectures */}
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceContent}>
+                  <Text style={styles.preferenceIcon}>🎙️</Text>
+                  <View style={styles.preferenceText}>
+                    <SpecialText style={styles.preferenceName}>Record Lectures</SpecialText>
+                    <SpecialText
+                      style={styles.preferenceDescription}
+                    >Record and transcribe lectures with automatic transcription</SpecialText>
+                  </View>
+                </View>
+                <View style={styles.switchContainer}>
+                  {isLoading && (
+                    <ActivityIndicator size="small" color="#4caf50" style={styles.loader} />
+                  )}
+                  <Switch
+                    value={servicePreferences.recordingsLecture}
+                    onValueChange={() => toggleServicePreference('recordingsLecture')}
+                    trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
+                    thumbColor={servicePreferences.recordingsLecture ? '#4caf50' : '#f1f1f1'}
+                    disabled={isLoading}
+                  />
                 </View>
               </View>
-              <View style={styles.switchContainer}>
-                {isLoading && (
-                  <ActivityIndicator size="small" color="#4caf50" style={styles.loader} />
-                )}
+
+              {/* Capture Books */}
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceContent}>
+                  <Text style={styles.preferenceIcon}>📷</Text>
+                  <View style={styles.preferenceText}>
+                    <SpecialText style={styles.preferenceName}>Capture & Scan Books</SpecialText>
+                    <SpecialText
+                      style={styles.preferenceDescription}
+                    >Capture physical book pages and extract text with OCR</SpecialText>
+                  </View>
+                </View>
+                <View style={styles.switchContainer}>
+                  {isLoading && (
+                    <ActivityIndicator size="small" color="#4caf50" style={styles.loader} />
+                  )}
+                  <Switch
+                    value={servicePreferences.captureBooks}
+                    onValueChange={() => toggleServicePreference('captureBooks')}
+                    trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
+                    thumbColor={servicePreferences.captureBooks ? '#4caf50' : '#f1f1f1'}
+                    disabled={isLoading}
+                  />
+                </View>
+              </View>
+
+              {/* Voice Modality */}
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceContent}>
+                  <Text style={styles.preferenceIcon}>🔊</Text>
+                  <View style={styles.preferenceText}>
+                    <SpecialText style={styles.preferenceName}>Voice Modality</SpecialText>
+                    <SpecialText
+                      style={styles.preferenceDescription}
+                    >Use voice commands and get audio responses</SpecialText>
+                  </View>
+                </View>
+                <View style={styles.switchContainer}>
+                  {isLoading && (
+                    <ActivityIndicator size="small" color="#4caf50" style={styles.loader} />
+                  )}
+                  <Switch
+                    value={servicePreferences.voiceModality}
+                    onValueChange={() => toggleServicePreference('voiceModality')}
+                    trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
+                    thumbColor={servicePreferences.voiceModality ? '#4caf50' : '#f1f1f1'}
+                    disabled={isLoading}
+                  />
+                </View>
+              </View>
+
+              {/* Bionic Text */}
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceContent}>
+                  <Text style={styles.preferenceIcon}>👁️</Text>
+                  <View style={styles.preferenceText}>
+                    <SpecialText style={styles.preferenceName}>Bionic Text</SpecialText>
+                    <SpecialText
+                      style={styles.preferenceDescription}
+                    >Enable enhanced readability with bionic text rendering</SpecialText>
+                  </View>
+                </View>
                 <Switch
-                  value={servicePreferences.recordingsLecture}
-                  onValueChange={() => toggleServicePreference('recordingsLecture')}
+                  value={servicePreferences.bionicText}
+                  onValueChange={() => toggleServicePreference('bionicText')}
                   trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
-                  thumbColor={servicePreferences.recordingsLecture ? '#4caf50' : '#f1f1f1'}
+                  thumbColor={servicePreferences.bionicText ? '#4caf50' : '#f1f1f1'}
                   disabled={isLoading}
                 />
               </View>
+
+              {/* Info Box */}
+              {/* <View style={styles.infoBox}>
+                <Text style={styles.infoTitle}>💡</Text>
+                <SpecialText
+                  style={styles.infoText}
+                >When you disable a service, related features and buttons will be hidden from the app. You can re-enable them anytime from this settings panel.</SpecialText>
+              </View> */}
             </View>
 
-            {/* Capture Books */}
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceContent}>
-                <Text style={styles.preferenceIcon}>📚</Text>
-                <View style={styles.preferenceText}>
-                  <Text style={styles.preferenceName}>Capture & Scan Books</Text>
-                  <Text style={styles.preferenceDescription}>
-                    Capture physical book pages and extract text with OCR
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.switchContainer}>
-                {isLoading && (
-                  <ActivityIndicator size="small" color="#4caf50" style={styles.loader} />
-                )}
-                <Switch
-                  value={servicePreferences.captureBooks}
-                  onValueChange={() => toggleServicePreference('captureBooks')}
-                  trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
-                  thumbColor={servicePreferences.captureBooks ? '#4caf50' : '#f1f1f1'}
-                  disabled={isLoading}
-                />
-              </View>
-            </View>
+            {/* ACCOUNT SECTION - SINGLE CARD */}
+            <View style={styles.accountCard}>
+              <SpecialText style={styles.sectionTitle}><Text>🚪</Text> Account</SpecialText>
 
-            {/* Voice Modality */}
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceContent}>
-                <Text style={styles.preferenceIcon}>🎤</Text>
-                <View style={styles.preferenceText}>
-                  <Text style={styles.preferenceName}>Voice Modality</Text>
-                  <Text style={styles.preferenceDescription}>
-                    Use voice commands and get audio responses
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.switchContainer}>
-                {isLoading && (
-                  <ActivityIndicator size="small" color="#4caf50" style={styles.loader} />
-                )}
-                <Switch
-                  value={servicePreferences.voiceModality}
-                  onValueChange={() => toggleServicePreference('voiceModality')}
-                  trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
-                  thumbColor={servicePreferences.voiceModality ? '#4caf50' : '#f1f1f1'}
-                  disabled={isLoading}
-                />
-              </View>
-            </View>
+              <View style={styles.cardDivider} />
 
-            {/* Bionic Text */}
-            <View style={styles.preferenceItem}>
-              <View style={styles.preferenceContent}>
-                <Text style={styles.preferenceIcon}>👁️</Text>
-                <View style={styles.preferenceText}>
-                  <Text style={styles.preferenceName}>Bionic Text</Text>
-                  <Text style={styles.preferenceDescription}>
-                    Enable enhanced readability with bionic text rendering
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                value={servicePreferences.bionicText}
-                onValueChange={() => toggleServicePreference('bionicText')}
-                trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
-                thumbColor={servicePreferences.bionicText ? '#4caf50' : '#f1f1f1'}
-                disabled={isLoading}
-              />
-            </View>
-            {/* Info Box */}
-            <View style={styles.infoBox}>
-              <Text style={styles.infoTitle}>💡 Note</Text>
-              <Text style={styles.infoText}>
-                When you disable a service, related features and buttons will be hidden from the app. You can re-enable them anytime from this settings panel.
-              </Text>
+              <TouchableOpacity
+                style={styles.logoutButtonCard}
+                onPress={handleLogout}
+                disabled={isLoggingOut}
+              >
+                <SpecialText style={styles.logoutButtonText}>
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
+                </SpecialText>
+                <SpecialText
+                  style={styles.logoutButtonDescription}
+                >Sign out from your account</SpecialText>
+              </TouchableOpacity>
             </View>
           </ScrollView>
 
@@ -345,6 +548,112 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666666',
     lineHeight: 20,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333333',
+    marginBottom: 12,
+    paddingLeft: 4,
+  },
+  profileValue: {
+    fontSize: 14,
+    color: '#4caf50',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  profileCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  educationCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  accountCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  cardLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  cardValue: {
+    fontSize: 14,
+    color: '#4caf50',
+    fontWeight: '600',
+  },
+  gradePickerWrapper: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  pickerContainer: {
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    paddingVertical: 8,
+  },
+  picker: {
+    height: 50,
+  },
+  logoutButtonCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#fff5f5',
+  },
+  logoutButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#d32f2f',
+    marginBottom: 4,
+  },
+  logoutButtonDescription: {
+    fontSize: 13,
+    color: '#c62828',
   },
   modalFooter: {
     paddingHorizontal: 16,

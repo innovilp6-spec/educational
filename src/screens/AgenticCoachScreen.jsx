@@ -632,7 +632,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
             <View style={styles.header}>
                 <View style={styles.headerCenterContent}>
                     <SpecialText style={styles.headerTitle}>Your Coach</SpecialText>
-                    <SpecialText style={styles.headerSubtitle}>{currentContextName}</SpecialText>
+                    <SpecialText style={styles.headerSubtitle}>{currentContextName || "General"}</SpecialText>
                 </View>
                 <TouchableOpacity
                     onPress={clearConversation}

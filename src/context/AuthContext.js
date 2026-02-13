@@ -42,6 +42,7 @@ export const AuthProvider = ({ children }) => {
     login: async (userData) => {
       try {
         setUser(userData);
+        console.log('[AUTH-CONTEXT] Logging in user:', userData);
         await AsyncStorage.setItem('user', JSON.stringify(userData));
         console.log('[AUTH-CONTEXT] User logged in:', userData.userId);
         return { success: true };
@@ -109,6 +110,8 @@ export const AuthProvider = ({ children }) => {
      * Get user's email (for API headers)
      */
     getUserEmail: () => user?.email || null,
+
+    getUserName: () => user?.name || null,
   };
 
   return (
