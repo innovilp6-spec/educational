@@ -19,7 +19,6 @@ import { useDispatch } from 'react-redux';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthContext';
 import { setUserConfig } from '../store/slices/configSlice';
-import SpecialText from '../components/SpecialText';
 
 const SERVER_BASE_URL = 'http://10.0.2.2:5000';
 
@@ -97,8 +96,8 @@ export default function LoginScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <SpecialText style={styles.headerTitle}><Text>📚 </Text>Welcome Back</SpecialText>
-          <SpecialText style={styles.headerSubtitle}>Accessibility Learning Platform</SpecialText>
+           <Text style={styles.headerTitle}>📚 Welcome Back</Text>
+          <Text style={styles.headerSubtitle}>Accessibility Learning Platform</Text>
         </View>
 
         <View style={styles.content}>
