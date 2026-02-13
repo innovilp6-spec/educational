@@ -41,7 +41,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
     const [messages, setMessages] = useState([]);
     const [userInput, setUserInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [simplificationLevel, setSimplificationLevel] = useState(3);
+    const [simplificationLevel, setSimplificationLevel] = useState(5);
     const [isLoadingHistory, setIsLoadingHistory] = useState(true);
     const [currentInteractionId, setCurrentInteractionId] = useState(null);
     const [currentContext, setCurrentContext] = useState(validContextType);
@@ -661,7 +661,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
             )}
 
             {/* Simplification Level Control */}
-            <View style={styles.controlsContainer}>
+            {servicePreferences.simplification && <View style={styles.controlsContainer}>
                 <SpecialText style={styles.controlLabel}>Simplification Level</SpecialText>
                 <View style={styles.levelSelector}>
                     {[1, 2, 3, 4, 5].map(level => (
@@ -684,13 +684,13 @@ export default function AgenticCoachScreen({ route, navigation }) {
                         </TouchableOpacity>
                     ))}
                 </View>
-            </View>
+            </View>}
 
             {/* Input Section */}
             <View style={styles.inputContainer}>
                 {/* Floating Action Menu */}
                 <FloatingActionMenu
-                    key={`fab-${servicePreferences.recordingsLecture}-${servicePreferences.captureBooks}-${servicePreferences.voiceModality}-${servicePreferences.bionicText}`}
+                    key={`fab-${servicePreferences.recordingsLecture}-${servicePreferences.captureBooks}-${servicePreferences.voiceModality}-${servicePreferences.bionicText}-${servicePreferences.simplification}`}
                     actions={[
                         servicePreferences.recordingsLecture && {
                             icon: '🎙️',

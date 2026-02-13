@@ -371,6 +371,26 @@ export default function FloatingSettingsButton() {
                 />
               </View>
 
+
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceContent}>
+                  <Text style={styles.preferenceIcon}>🧷</Text>
+                  <View style={styles.preferenceText}>
+                    <SpecialText style={styles.preferenceName}>Simplification</SpecialText>
+                    <SpecialText
+                      style={styles.preferenceDescription}
+                    >Enable simplification scale for reading comprehension</SpecialText>
+                  </View>
+                </View>
+                <Switch
+                  value={servicePreferences.simplification}
+                  onValueChange={() => toggleServicePreference('simplification')}
+                  trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
+                  thumbColor={servicePreferences.simplification ? '#4caf50' : '#f1f1f1'}
+                  disabled={isLoading}
+                />
+              </View>
+
               {/* Info Box */}
               {/* <View style={styles.infoBox}>
                 <Text style={styles.infoTitle}>💡</Text>

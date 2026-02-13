@@ -59,6 +59,7 @@ export default function RegisterScreen({ navigation }) {
     captureBooks: false,
     voiceModality: false,
     bionicText: false,
+    simplification: false,
   });
 
   // Legacy services (kept for backward compatibility)
@@ -446,6 +447,23 @@ export default function RegisterScreen({ navigation }) {
               <Switch
                 value={servicePreferences.bionicText}
                 onValueChange={() => toggleServicePreference('bionicText')}
+                disabled={isLoading}
+              />
+            </View>
+
+            <View style={styles.serviceItem}>
+              <View style={styles.serviceContent}>
+                <Text style={styles.serviceIcon}>🧷</Text>
+                <View style={styles.serviceText}>
+                  <Text style={styles.serviceName}>Simplification</Text>
+                  <Text style={styles.serviceDescription}>
+                    Enable enhanced readability with simplified text rendering
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={servicePreferences.simplification}
+                onValueChange={() => toggleServicePreference('simplification')}
                 disabled={isLoading}
               />
             </View>

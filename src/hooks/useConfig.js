@@ -30,7 +30,7 @@ export const useConfig = () => {
     hasCaptureBooks: config.servicePreferences.captureBooks,
     hasVoiceModality: config.servicePreferences.voiceModality,
     hasBionicText: config.servicePreferences.bionicText,
-
+    hasSimplification: config.servicePreferences.simplification,
     // Action dispatchers
     setServicePreferences: (prefs) =>
       dispatch(setServicePreferences(prefs)),
