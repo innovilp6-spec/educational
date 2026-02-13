@@ -112,6 +112,8 @@ export const AuthProvider = ({ children }) => {
     getUserEmail: () => user?.email || null,
 
     getUserName: () => user?.name || null,
+
+    getUserGrade: () => user?.educationStandard || null,
   };
 
   return (

@@ -27,9 +27,10 @@ import apiService from '../services/apiService';
 
 
 export default function FloatingSettingsButton() {
+  const { getUserEmail, logout, getUserName, getUserGrade } = useAuth();
   const navigation = useNavigation();
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const [selectedGrade, setSelectedGrade] = useState('10');
+  const [selectedGrade, setSelectedGrade] = useState(getUserGrade());
   const [isUpdatingGrade, setIsUpdatingGrade] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -43,7 +44,6 @@ export default function FloatingSettingsButton() {
     isLoading,
     error,
   } = useConfig();
-  const { getUserEmail, logout, getUserName } = useAuth();
 
   console.log('[FloatingSettingsButton] Rendered with name', getUserName());
   const grades = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
@@ -245,7 +245,7 @@ export default function FloatingSettingsButton() {
               <View style={styles.cardDivider} />
 
               <View style={styles.gradePickerWrapper}>
-                <SpecialText style={styles.cardLabel}>Grade</SpecialText>
+                {/* <SpecialText style={styles.cardLabel}>Grade</SpecialText> */}
                 <SpecialText
                   style={styles.cardValue}
                 >{`In Grade ${selectedGrade}`}</SpecialText>
