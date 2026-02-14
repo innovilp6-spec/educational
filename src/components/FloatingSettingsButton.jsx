@@ -371,6 +371,25 @@ export default function FloatingSettingsButton() {
                 />
               </View>
 
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceContent}>
+                  <Text style={styles.preferenceIcon}>📚</Text>
+                  <View style={styles.preferenceText}>
+                    <SpecialText style={styles.preferenceName}>Text Reader</SpecialText>
+                    <SpecialText
+                      style={styles.preferenceDescription}
+                    >Text reader for reading scanned books</SpecialText>
+                  </View>
+                </View>
+                <Switch
+                  value={servicePreferences.textReader}
+                  onValueChange={() => toggleServicePreference('textReader')}
+                  trackColor={{ false: '#e0e0e0', true: '#c8e6c9' }}
+                  thumbColor={servicePreferences.textReader ? '#4caf50' : '#f1f1f1'}
+                  disabled={isLoading}
+                />
+              </View>
+
 
               <View style={styles.preferenceItem}>
                 <View style={styles.preferenceContent}>

@@ -31,6 +31,7 @@ export const useConfig = () => {
     hasVoiceModality: config.servicePreferences.voiceModality,
     hasBionicText: config.servicePreferences.bionicText,
     hasSimplification: config.servicePreferences.simplification,
+    hasTextReader: config.servicePreferences.textReader,
     // Action dispatchers
     setServicePreferences: (prefs) =>
       dispatch(setServicePreferences(prefs)),

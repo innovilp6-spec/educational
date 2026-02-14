@@ -49,6 +49,7 @@ const initialState = {
     voiceModality: false,
     bionicText: false,
     simplification: false,
+    textReader: false,
   },
   language: 'English',
   educationStandard: null,
@@ -71,6 +72,7 @@ const configSlice = createSlice({
         voiceModality: action.payload.voiceModality || false,
         bionicText: action.payload.bionicText || false,
         simplification: action.payload.simplification || false,
+        textReader: action.payload.textReader || false,
       };
       state.error = null;
       state.isLoading = false;
@@ -107,6 +109,7 @@ const configSlice = createSlice({
           voiceModality: servicePreferences.voiceModality || false,
           bionicText: servicePreferences.bionicText || false,
           simplification: servicePreferences.simplification || false,
+          textReader: servicePreferences.textReader || false,
         };
       }
       if (language) state.language = language;

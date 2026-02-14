@@ -14,15 +14,16 @@ import useBookReader from '../hooks/useBookReader';
 import FloatingActionMenu from '../components/FloatingActionMenu';
 import { useAuth } from '../context/AuthContext';
 import SpecialText from '../components/SpecialText';
+import useConfig from '../hooks/useConfig';
 const API_BASE = 'http://10.0.2.2:5000/api';
 
 const BookDetailScreen = ({ route, navigation }) => {
+    const { servicePreferences } = useConfig();
     const { bookId } = route.params;
     const [book, setBook] = useState(null);
     const [loading, setLoading] = useState(true);
     const [textArray3D, setTextArray3D] = useState([]); // 3D array [page][paragraph][sentence]
     const { getUserEmail } = useAuth();
-
     // Use the custom hook for book reading functionality
     const {
         currentPage,
@@ -68,7 +69,7 @@ const BookDetailScreen = ({ route, navigation }) => {
                 setLoading(false);
                 return;
             }
-            
+
             // Fallback: Fetch from API if no data was passed (backward compatibility)
             console.log('[BookDetail] No book data in params, fetching from API...');
             fetchBookDetail();
@@ -79,12 +80,18 @@ const BookDetailScreen = ({ route, navigation }) => {
         }, [route.params?.bookData])
     );
 
+    useFocusEffect(useCallback(()=>{
+        if( servicePreferences && servicePreferences.textReader){
+            changeReadingMode('page');
+        }
+    },[servicePreferences]))
+
     const fetchBookDetail = async () => {
         try {
             setLoading(true);
             const email = getUserEmail();
             const url = `${API_BASE}/books/captured/${bookId}`;
-            
+
             console.log('\n[BookDetail] ===== FETCHING BOOK DETAIL =====');
             console.log('[BookDetail] Book ID:', bookId);
             console.log('[BookDetail] User email:', email);
@@ -114,7 +121,7 @@ const BookDetailScreen = ({ route, navigation }) => {
                 const data = await response.json();
                 console.log('[BookDetail] ✓ JSON parsed successfully');
                 console.log('[BookDetail] Success flag:', data.success);
-                
+
                 if (data.success) {
                     const bookData = data.data;
                     console.log('[BookDetail] ✓ Book data received');
@@ -122,7 +129,7 @@ const BookDetailScreen = ({ route, navigation }) => {
                     console.log('[BookDetail] Book pages:', bookData.textArray3D?.length || 0);
                     console.log('[BookDetail] Average confidence:', bookData.averageConfidence);
                     console.log('[BookDetail] ===== DATA LOADED SUCCESSFULLY =====\n');
-                    
+
                     setBook(bookData);
                     // Safely set textArray3D, default to empty array if undefined
                     setTextArray3D(bookData.textArray3D || []);
@@ -145,7 +152,7 @@ const BookDetailScreen = ({ route, navigation }) => {
             console.error('[BookDetail] Error type:', error.name);
             console.error('[BookDetail] Error message:', error.message);
             console.error('[BookDetail] Error stack:', error.stack);
-            
+
             if (error.name === 'AbortError') {
                 console.error('[BookDetail] Request timeout - server took more than 10 seconds to respond');
                 Alert.alert('Error', 'Request timeout - server is not responding');
@@ -311,7 +318,7 @@ const BookDetailScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
 
                 {/* Reading Mode Button */}
-                <TouchableOpacity
+                {servicePreferences.textReader && <TouchableOpacity
                     style={styles.modeButton}
                     onPress={() => {
                         const modes = ['sentence', 'paragraph', 'page'];
@@ -323,10 +330,10 @@ const BookDetailScreen = ({ route, navigation }) => {
                     <SpecialText style={styles.modeButtonText}>
                         {readingMode === 'sentence' ? 'Sentence' : readingMode === 'paragraph' ? 'Paragraph' : 'Page'}
                     </SpecialText>
-                </TouchableOpacity>
+                </TouchableOpacity>}
 
                 {/* Play/Pause Button */}
-                <TouchableOpacity
+                {servicePreferences.textReader && <TouchableOpacity
                     style={[styles.playButton, isSpeaking && styles.playButtonActive]}
                     onPress={() => {
                         if (isSpeaking) {
@@ -345,7 +352,7 @@ const BookDetailScreen = ({ route, navigation }) => {
                         size={24}
                         color="#fff"
                     />
-                </TouchableOpacity>
+                </TouchableOpacity>}
 
                 {/* Next Paragraph Button */}
                 <TouchableOpacity

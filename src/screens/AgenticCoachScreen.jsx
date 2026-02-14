@@ -690,7 +690,7 @@ export default function AgenticCoachScreen({ route, navigation }) {
             <View style={styles.inputContainer}>
                 {/* Floating Action Menu */}
                 <FloatingActionMenu
-                    key={`fab-${servicePreferences.recordingsLecture}-${servicePreferences.captureBooks}-${servicePreferences.voiceModality}-${servicePreferences.bionicText}-${servicePreferences.simplification}`}
+                    key={`fab-${servicePreferences.recordingsLecture}-${servicePreferences.captureBooks}-${servicePreferences.voiceModality}-${servicePreferences.bionicText}-${servicePreferences.simplification}-${servicePreferences.textReader}`}
                     actions={[
                         servicePreferences.recordingsLecture && {
                             icon: '🎙️',
