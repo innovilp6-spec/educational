@@ -2,13 +2,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
-import HomeScreen from '../screens/HomeScreen';
 import LectureCaptureScreen from '../screens/LectureCaptureScreen';
-import DebugTranscribeScreen from '../screens/DebugTranscribeScreen';
-import StudyLibraryScreen from '../screens/StudyLibraryScreen';
-import BookReadingScreen from '../screens/BookReadingScreen';
 import SugamyaLibraryScreen from '../screens/SugamyaLibraryScreen';
-import ExportScreen from '../screens/ExportScreen';
 import TranscribingScreen from '../screens/TranscribingScreen';
 import TranscriptScreen from '../screens/TranscriptScreen';
 import ErrorScreen from '../screens/ErrorScreen';
@@ -16,7 +11,6 @@ import NameSessionScreen from '../screens/NameSessionScreen';
 import TranscriptViewerScreen from '../screens/TranscriptViewerScreen';
 import RecordingsListScreen from '../screens/RecordingsListScreen';
 import AgenticCoachScreen from '../screens/AgenticCoachScreen';
-import GeneralCoachScreen from '../screens/GeneralCoachScreen';
 import AgenticNotesScreen from '../screens/AgenticNotesScreen';
 import CapturedBooksLibraryScreen from '../screens/CapturedBooksLibraryScreen';
 import BookCameraScreen from '../screens/BookCameraScreen';
@@ -38,17 +32,8 @@ export default function AppNavigator() {
             <Stack.Screen name="Register" component={RegisterScreen} />
 
             {/* App Screens */}
-            <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="LectureCapture" component={LectureCaptureScreen} />
-            <Stack.Screen
-                name="DebugTranscribe"
-                component={DebugTranscribeScreen}
-                options={{ title: 'Debug: Transcription' }}
-            />
-            <Stack.Screen name="StudyLibrary" component={StudyLibraryScreen} />
-            <Stack.Screen name="BookReading" component={BookReadingScreen} />
             <Stack.Screen name="Sugamya" component={SugamyaLibraryScreen} />
-            <Stack.Screen name="Export" component={ExportScreen} />
             <Stack.Screen name="Transcribing" component={TranscribingScreen} />
             <Stack.Screen name="Transcript" component={TranscriptScreen} />
             <Stack.Screen name="Error" component={ErrorScreen} />
@@ -60,12 +45,6 @@ export default function AppNavigator() {
                 name="AgenticCoach"
                 component={AgenticCoachScreen}
                 options={{ title: 'Study with Coach' }}
-            />
-
-            <Stack.Screen
-                name="GeneralCoach"
-                component={GeneralCoachScreen}
-                options={{ title: 'Coach' }}
             />
 
             <Stack.Screen
