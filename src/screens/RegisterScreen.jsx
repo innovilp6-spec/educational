@@ -164,7 +164,7 @@ export default function RegisterScreen({ navigation }) {
           [
             {
               text: 'Go to Home',
-              onPress: () => navigation.replace('Home'),
+              onPress: () => navigation.replace('AgenticCoach'),
             },
           ]
         );
