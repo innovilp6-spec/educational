@@ -970,6 +970,8 @@ export default function useTranscriptAPI() {
             // Normalize response based on backend structure
             const requests = response.books || response.requests || response.data || [];
 
+            console.log('[useTranscriptAPI] Normalized download requests:', requests);
+
             return {
                 requests: requests.map(item => ({
                     requestId: item.requestId || item.bookId,

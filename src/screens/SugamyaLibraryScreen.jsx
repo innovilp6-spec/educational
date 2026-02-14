@@ -15,6 +15,8 @@ import {
   ScrollView,
   TextInput,
   Modal,
+  Linking,
+  Alert,
   SafeAreaView,
 } from 'react-native';
 import PrimaryButton from '../components/PrimaryButton';
@@ -69,9 +71,11 @@ export default function SugamyaLibraryScreen() {
       loadDownloads();
     } else if (activeTab === 'downloadRequests') {
       loadDownloadRequests();
-    } else if (activeTab === 'history') {
-      loadUserHistory();
     }
+
+    // else if (activeTab === 'history') {
+    //   loadUserHistory();
+    // }
   }, [activeTab]);
 
   const loadDownloads = async () => {
@@ -85,7 +89,8 @@ export default function SugamyaLibraryScreen() {
 
   const loadDownloadRequests = async () => {
     try {
-      const requests = await getSugamyaDownloadRequests(1, 10);
+      const requests = await getSugamyaDownloadRequests(1, 250);
+      console.log('Raw download requests response:', requests);
       setDownloadRequests(requests.requests || []);
     } catch (error) {
       console.error('Failed to load download requests:', error);
@@ -145,7 +150,7 @@ export default function SugamyaLibraryScreen() {
 
       // Get book ID from multiple possible property names
       const bookId = selectedBook.sugamyaId || selectedBook.id || selectedBook.bookId;
-      
+
       if (!bookId) {
         alert('Book ID not found. Unable to request download.');
         return;
@@ -356,6 +361,16 @@ export default function SugamyaLibraryScreen() {
     </ScrollView>
   );
 
+  const openDownloadLink = async (url) => {
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.error('Error opening URL:', error);
+      Alert.alert('Error', 'Unable to open download link.');
+    }
+  };
+
+
   // Render download requests tab
   const renderDownloadRequestsTab = () => {
     const renderRequestItem = (item) => (
@@ -364,19 +379,19 @@ export default function SugamyaLibraryScreen() {
           <SpecialText style={styles.requestTitle}>{item.bookTitle}</SpecialText>
           <SpecialText style={[
             styles.requestStatus,
-            { color: item.status === 'completed' ? COLORS.success : COLORS.warning }
+            { color: item.status === 'ready' ? COLORS.success : COLORS.warning }
           ]}>
-            {item.status === 'completed' ? '✓' : '⏳'} {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            {item.status === 'ready' ? '✓' : '⏳'} {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
           </SpecialText>
         </View>
         <SpecialText style={styles.requestFormat}>Format: {item.format}</SpecialText>
         {item.expiryDate && (
           <SpecialText style={styles.requestExpiry}>Expires: {item.expiryDate}</SpecialText>
         )}
-        {item.status === 'completed' && item.downloadLink && (
+        {item.status === 'ready' && item.downloadLink && (
           <TouchableOpacity
             style={styles.downloadLinkButton}
-            onPress={() => alert('Opening download link: ' + item.downloadLink)}
+            onPress={() => openDownloadLink(item.downloadLink)}
           >
             <SpecialText style={styles.downloadLinkText}><Text>📥</Text> Download Now</SpecialText>
           </TouchableOpacity>
@@ -412,55 +427,55 @@ export default function SugamyaLibraryScreen() {
   };
 
   // Render user history tab
-  const renderHistoryTab = () => {
-    const renderHistoryItem = (item) => (
-      <View style={styles.historyItem}>
-        <View style={styles.historyHeader}>
-          <SpecialText style={styles.historyTitle}>{item.bookTitle}</SpecialText>
-        </View>
-        <SpecialText style={styles.historyAuthor}>Author: {item.bookAuthor}</SpecialText>
-        <SpecialText style={styles.historyFormat}>Format: {item.format}</SpecialText>
-        <TouchableOpacity
-          style={styles.historyDownloadButton}
-          onPress={() => {
-            if (item.downloadLink) {
-              alert('Opening download link: ' + item.downloadLink);
-            } else {
-              alert('Download link not available');
-            }
-          }}
-        >
-          <SpecialText style={styles.historyDownloadButtonText}><Text>📥</Text> Access Book</SpecialText>
-        </TouchableOpacity>
-      </View>
-    );
+  // const renderHistoryTab = () => {
+  //   const renderHistoryItem = (item) => (
+  //     <View style={styles.historyItem}>
+  //       <View style={styles.historyHeader}>
+  //         <SpecialText style={styles.historyTitle}>{item.bookTitle}</SpecialText>
+  //       </View>
+  //       <SpecialText style={styles.historyAuthor}>Author: {item.bookAuthor}</SpecialText>
+  //       <SpecialText style={styles.historyFormat}>Format: {item.format}</SpecialText>
+  //       <TouchableOpacity
+  //         style={styles.historyDownloadButton}
+  //         onPress={() => {
+  //           if (item.downloadLink) {
+  //             alert('Opening download link: ' + item.downloadLink);
+  //           } else {
+  //             alert('Download link not available');
+  //           }
+  //         }}
+  //       >
+  //         <SpecialText style={styles.historyDownloadButtonText}><Text>📥</Text> Access Book</SpecialText>
+  //       </TouchableOpacity>
+  //     </View>
+  //   );
 
-    return (
-      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.downloadsHeader}>
-          <SpecialText style={styles.downloadsTitle}>📖 Reading History</SpecialText>
-          <TouchableOpacity
-            style={styles.refreshButton}
-            onPress={loadUserHistory}
-            disabled={isProcessing}
-          >
-            <SpecialText style={styles.refreshButtonText}>↻</SpecialText>
-          </TouchableOpacity>
-        </View>
+  //   return (
+  //     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+  //       <View style={styles.downloadsHeader}>
+  //         <SpecialText style={styles.downloadsTitle}>📖 Reading History</SpecialText>
+  //         <TouchableOpacity
+  //           style={styles.refreshButton}
+  //           onPress={loadUserHistory}
+  //           disabled={isProcessing}
+  //         >
+  //           <SpecialText style={styles.refreshButtonText}>↻</SpecialText>
+  //         </TouchableOpacity>
+  //       </View>
 
-        {userHistory.length === 0 ? (
-          <SpecialText style={styles.emptyText}>No reading history yet. Browse and read books to see them here!</SpecialText>
-        ) : (
-          <FlatList
-            data={userHistory}
-            renderItem={({ item }) => renderHistoryItem(item)}
-            keyExtractor={(item) => item.bookId}
-            scrollEnabled={false}
-          />
-        )}
-      </ScrollView>
-    );
-  };
+  //       {userHistory.length === 0 ? (
+  //         <SpecialText style={styles.emptyText}>No reading history yet. Browse and read books to see them here!</SpecialText>
+  //       ) : (
+  //         <FlatList
+  //           data={userHistory}
+  //           renderItem={({ item }) => renderHistoryItem(item)}
+  //           keyExtractor={(item) => item.bookId}
+  //           scrollEnabled={false}
+  //         />
+  //       )}
+  //     </ScrollView>
+  //   );
+  // };
 
   // Book Details Modal
   const renderBookDetailsModal = () => (
@@ -583,7 +598,7 @@ export default function SugamyaLibraryScreen() {
             <Text>⏳</Text> Requests
           </SpecialText>
         </TouchableOpacity>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={[styles.tab, activeTab === 'history' && styles.tabActive]}
           onPress={() => setActiveTab('history')}
         >
@@ -592,7 +607,7 @@ export default function SugamyaLibraryScreen() {
           >
             <Text>📖</Text> History
           </SpecialText>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Tab Content */}
@@ -600,7 +615,7 @@ export default function SugamyaLibraryScreen() {
       {activeTab === 'popular' && renderPopularTab()}
       {activeTab === 'downloads' && renderDownloadsTab()}
       {activeTab === 'downloadRequests' && renderDownloadRequestsTab()}
-      {activeTab === 'history' && renderHistoryTab()}
+      {/* {activeTab === 'history' && renderHistoryTab()} */}
 
       {/* Book Details Modal */}
       {renderBookDetailsModal()}
@@ -987,7 +1002,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   downloadLinkButton: {
-    backgroundColor: COLORS.success,
+    backgroundColor: COLORS.primary,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
