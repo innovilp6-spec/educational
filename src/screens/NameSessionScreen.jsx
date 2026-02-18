@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Alert, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import RNFS from 'react-native-fs';
 import PrimaryButton from '../components/PrimaryButton';
 import InfoButton from '../components/InfoButton';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import useVoiceModality from '../hooks/useVoiceModality';
+import useSimpleSTT from '../hooks/useSimpleSTT';
+import { VoiceContext } from '../context/VoiceContext';
 import { useConfig } from '../hooks/useConfig';
 import { NAMING_NOMENCLATURE, DETAILED_GUIDELINES, validateName } from '../utils/namingNomenclature';
 import SpecialText from '../components/SpecialText';
 
 export default function NameSessionScreen({ navigation, route }) {
   const { masterTranscript } = route.params;
+  const { settings } = React.useContext(VoiceContext);
+  const voiceEnabled = settings?.voiceEnabled ?? true;
   const [name, setName] = useState('');
   const [standard, setStandard] = useState('');
   const [chapter, setChapter] = useState('');
@@ -19,6 +24,36 @@ export default function NameSessionScreen({ navigation, route }) {
   const { educationStandard } = useConfig();
   const nomenclature = NAMING_NOMENCLATURE.lecture;
   const guidelines = DETAILED_GUIDELINES.lecture;
+
+  // Voice hooks
+  const sttName = useSimpleSTT({
+    onTranscript: (transcript) => setName(transcript),
+    autoSubmitOnSilence: false,
+  });
+
+  const sttSubject = useSimpleSTT({
+    onTranscript: (transcript) => setSubject(transcript),
+    autoSubmitOnSilence: false,
+  });
+
+  const sttChapter = useSimpleSTT({
+    onTranscript: (transcript) => setChapter(transcript),
+    autoSubmitOnSilence: false,
+  });
+
+  const commandHandlers = {
+    save: async () => {
+      await handleSave();
+    },
+    clearName: () => {
+      setName('');
+      voice.speakMessage('Name cleared');
+    },
+  };
+
+  const voice = useVoiceModality('NameSessionScreen', commandHandlers, {
+    enableAutoTTS: true,
+  });
 
   // Initialize standard from user profile
   useEffect(() => {
@@ -174,15 +209,38 @@ export default function NameSessionScreen({ navigation, route }) {
         </View>
 
         <SpecialText style={styles.inputLabel}>Enter Lecture Name:</SpecialText>
-        <TextInput
-          style={styles.input}
-          placeholder={nomenclature.example}
-          placeholderTextColor="#bbb"
-          value={name}
-          onChangeText={setName}
-          editable={!isLoading}
-          maxLength={100}
-        />
+        <View style={styles.inputWithMic}>
+          <TextInput
+            style={[styles.input, styles.inputWithMicText]}
+            placeholder={nomenclature.example}
+            placeholderTextColor="#bbb"
+            value={name}
+            onChangeText={setName}
+            editable={!isLoading}
+            maxLength={100}
+          />
+          {voiceEnabled && (
+            <TouchableOpacity
+              style={[styles.micButton, sttName.isListening && styles.micButtonListening]}
+              onPress={() => sttName.isListening ? sttName.stopListening() : sttName.startListening()}
+              disabled={isLoading}
+            >
+              <Text style={styles.micButtonText}>{sttName.isListening ? '🔴' : '🎤'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {voiceEnabled && sttName.transcript && !sttName.error && (
+          <View style={styles.voiceTranscriptBubble}>
+            <SpecialText style={styles.voiceTranscriptText}>Heard: {sttName.transcript}</SpecialText>
+          </View>
+        )}
+
+        {voiceEnabled && sttName.error && (
+          <View style={styles.voiceErrorBubble}>
+            <SpecialText style={styles.voiceErrorText}>{sttName.error}</SpecialText>
+          </View>
+        )}
 
         {name.length > 0 && (
           <SpecialText style={styles.charCount}>{name.length}/100 characters</SpecialText>
@@ -190,27 +248,73 @@ export default function NameSessionScreen({ navigation, route }) {
 
         {/* Subject Field */}
         <SpecialText style={styles.inputLabel}>Subject:</SpecialText>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g., Mathematics, Science, English"
-          placeholderTextColor="#bbb"
-          value={subject}
-          onChangeText={setSubject}
-          editable={!isLoading}
-          maxLength={50}
-        />
+        <View style={styles.inputWithMic}>
+          <TextInput
+            style={[styles.input, styles.inputWithMicText]}
+            placeholder="e.g., Mathematics, Science, English"
+            placeholderTextColor="#bbb"
+            value={subject}
+            onChangeText={setSubject}
+            editable={!isLoading}
+            maxLength={50}
+          />
+          {voiceEnabled && (
+            <TouchableOpacity
+              style={[styles.micButton, sttSubject.isListening && styles.micButtonListening]}
+              onPress={() => sttSubject.isListening ? sttSubject.stopListening() : sttSubject.startListening()}
+              disabled={isLoading}
+            >
+              <Text style={styles.micButtonText}>{sttSubject.isListening ? '🔴' : '🎤'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {voiceEnabled && sttSubject.transcript && !sttSubject.error && (
+          <View style={styles.voiceTranscriptBubble}>
+            <SpecialText style={styles.voiceTranscriptText}>Heard: {sttSubject.transcript}</SpecialText>
+          </View>
+        )}
+
+        {voiceEnabled && sttSubject.error && (
+          <View style={styles.voiceErrorBubble}>
+            <SpecialText style={styles.voiceErrorText}>{sttSubject.error}</SpecialText>
+          </View>
+        )}
 
         {/* Chapter/Topic Field */}
         <SpecialText style={styles.inputLabel}>Chapter/Topic:</SpecialText>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g., Chapter 5, Data Types, Algebra Basics"
-          placeholderTextColor="#bbb"
-          value={chapter}
-          onChangeText={setChapter}
-          editable={!isLoading}
-          maxLength={100}
-        />
+        <View style={styles.inputWithMic}>
+          <TextInput
+            style={[styles.input, styles.inputWithMicText]}
+            placeholder="e.g., Chapter 5, Data Types, Algebra Basics"
+            placeholderTextColor="#bbb"
+            value={chapter}
+            onChangeText={setChapter}
+            editable={!isLoading}
+            maxLength={100}
+          />
+          {voiceEnabled && (
+            <TouchableOpacity
+              style={[styles.micButton, sttChapter.isListening && styles.micButtonListening]}
+              onPress={() => sttChapter.isListening ? sttChapter.stopListening() : sttChapter.startListening()}
+              disabled={isLoading}
+            >
+              <Text style={styles.micButtonText}>{sttChapter.isListening ? '🔴' : '🎤'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {voiceEnabled && sttChapter.transcript && !sttChapter.error && (
+          <View style={styles.voiceTranscriptBubble}>
+            <SpecialText style={styles.voiceTranscriptText}>Heard: {sttChapter.transcript}</SpecialText>
+          </View>
+        )}
+
+        {voiceEnabled && sttChapter.error && (
+          <View style={styles.voiceErrorBubble}>
+            <SpecialText style={styles.voiceErrorText}>{sttChapter.error}</SpecialText>
+          </View>
+        )}
 
         {/* Standard/Grade Field */}
         <SpecialText style={styles.inputLabel}>Standard/Grade:</SpecialText>
@@ -388,6 +492,60 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#007AFF',
     marginLeft: 12,
+  },
+  inputWithMic: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  inputWithMicText: {
+    flex: 1,
+  },
+  micButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  micButtonListening: {
+    backgroundColor: '#ffebee',
+    borderColor: '#ff4444',
+  },
+  micButtonText: {
+    fontSize: 18,
+  },
+  voiceTranscriptBubble: {
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+  },
+  voiceTranscriptText: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  voiceErrorBubble: {
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ff4444',
+  },
+  voiceErrorText: {
+    fontSize: 12,
+    color: '#ff4444',
+    fontWeight: '500',
   },
 });
 

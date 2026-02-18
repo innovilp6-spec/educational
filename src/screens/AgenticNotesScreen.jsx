@@ -15,11 +15,16 @@ import {
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import useSimpleSTT from '../hooks/useSimpleSTT';
+import useVoiceModality from '../hooks/useVoiceModality';
+import { VoiceContext } from '../context/VoiceContext';
 import FloatingActionMenu from '../components/FloatingActionMenu';
 import SpecialText from '../components/SpecialText';
 
 export default function AgenticNotesScreen({ route, navigation }) {
     const { transcriptId, sessionName, transcript } = route.params || {};
+    const { settings } = React.useContext(VoiceContext);
+    const voiceEnabled = settings?.voiceEnabled ?? true;
 
     // State management
     const [notes, setNotes] = useState([]);
@@ -39,6 +44,40 @@ export default function AgenticNotesScreen({ route, navigation }) {
         agenticAppendNote,
         agenticGetNote,
     } = useTranscriptAPI();
+
+    // Voice hooks for note input
+    const stt = useSimpleSTT({
+        onTranscript: (transcript) => setUserInput(transcript),
+        autoSubmitOnSilence: false,
+    });
+
+    const voiceCommandHandlers = {
+        saveNote: async () => {
+            console.log('[NOTES-VOICE] Save note');
+            if (userInput.trim()) {
+                await handleSendMessage();
+            } else {
+                stt.speakMessage('No text to save. Please say something to save.');
+            }
+        },
+        newNote: async () => {
+            console.log('[NOTES-VOICE] New note');
+            setCurrentNoteId(null);
+            setCurrentNote(null);
+            setMessages([]);
+            setUserInput('');
+            stt.speakMessage('Starting a new note');
+        },
+        clearText: async () => {
+            console.log('[NOTES-VOICE] Clear text');
+            setUserInput('');
+            stt.speakMessage('Text cleared');
+        },
+    };
+
+    const voice = useVoiceModality('AgenticNotes', voiceCommandHandlers, {
+        enableAutoTTS: true,
+    });
 
     // Scroll reference
     const scrollViewRef = useRef(null);
@@ -509,14 +548,44 @@ ${(currentNote.conversationHistory || [])
                                     <SpecialText style={styles.sendButtonText}>⬆</SpecialText>
                                 )}
                             </TouchableOpacity>
-                        ) : (
+                        ) : voiceEnabled ? (
                             <TouchableOpacity
-                                style={styles.micButton}
-                                disabled={isLoading}
-                                activeOpacity={0.7}
+                                style={[
+                                    styles.micButton,
+                                    stt.isListening && styles.micButtonListening,
+                                ]}
+                                onPress={() => {
+                                    if (stt.isListening) {
+                                        stt.stopListening();
+                                    } else {
+                                        stt.startListening();
+                                    }
+                                }}
+                                disabled={isLoading || stt.isListening}
+                                activeOpacity={stt.isListening ? 1 : 0.7}
                             >
-                                <Text style={styles.micButtonIcon}>🎤</Text>
+                                <Text style={styles.micButtonIcon}>
+                                    {stt.isListening ? '🔴' : '🎤'}
+                                </Text>
                             </TouchableOpacity>
+                        ) : null}
+
+                        {/* Voice Transcript Bubble */}
+                        {voiceEnabled && stt.transcript && !stt.error && (
+                            <View style={styles.voiceTranscriptBubble}>
+                                <Text style={styles.voiceTranscriptLabel}>Heard:</Text>
+                                <SpecialText style={styles.voiceTranscriptText}>{stt.transcript}</SpecialText>
+                            </View>
+                        )}
+
+                        {/* Voice Error Bubble */}
+                        {voiceEnabled && stt.error && (
+                            <View style={styles.voiceErrorBubble}>
+                                <SpecialText style={styles.voiceErrorText}>{stt.error}</SpecialText>
+                                <TouchableOpacity onPress={stt.clearTranscript} style={styles.voiceErrorDismiss}>
+                                    <Text style={styles.voiceErrorDismissText}>✕</Text>
+                                </TouchableOpacity>
+                            </View>
                         )}
                     </KeyboardAvoidingView>
                 </>
@@ -838,5 +907,58 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderTopWidth: 1,
         borderTopColor: '#eee',
+    },
+    // Voice Modality Styles
+    micButtonListening: {
+        backgroundColor: '#ffcdd2',
+        borderColor: '#ef5350',
+        borderWidth: 2,
+    },
+    voiceTranscriptBubble: {
+        backgroundColor: '#e3f2fd',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        marginHorizontal: 12,
+        marginBottom: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#2196f3',
+    },
+    voiceTranscriptLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#1976d2',
+        marginBottom: 4,
+    },
+    voiceTranscriptText: {
+        fontSize: 14,
+        color: '#333',
+        fontStyle: 'italic',
+    },
+    voiceErrorBubble: {
+        backgroundColor: '#ffebee',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        marginHorizontal: 12,
+        marginBottom: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#ef5350',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    voiceErrorText: {
+        fontSize: 13,
+        color: '#c62828',
+        flex: 1,
+    },
+    voiceErrorDismiss: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    voiceErrorDismissText: {
+        fontSize: 18,
+        color: '#c62828',
     },
 });

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Animated } from 'react-native';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import useVoiceModality from '../hooks/useVoiceModality';
+import { VoiceContext } from '../context/VoiceContext';
 import PrimaryButton from '../components/PrimaryButton';
 import RNFS from 'react-native-fs';
 import { requestReadExternalStoragePermission } from '../utils/permissions';
@@ -12,6 +14,8 @@ const FFMPEG_CHUNKS_DIR = RNFS.DownloadDirectoryPath;
 
 export default function LectureCaptureScreen({ navigation }) {
   const { transcribeAudioChunk } = useTranscriptAPI();
+  const { settings } = React.useContext(VoiceContext);
+  const voiceEnabled = settings?.voiceEnabled ?? true;
 
   const [masterTranscript, setMasterTranscript] = useState('');
   const [currentChunkTranscript, setCurrentChunkTranscript] = useState('');
@@ -20,6 +24,29 @@ export default function LectureCaptureScreen({ navigation }) {
   const [isRecording, setIsRecording] = useState(false);
   const [audioFiles, setAudioFiles] = useState([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+
+  // Voice command handlers
+  const commandHandlers = {
+    startRecording: async () => {
+      if (!isRecording) {
+        await handleStart();
+        voice.speakMessage('Recording started');
+      }
+    },
+    stopRecording: async () => {
+      if (isRecording) {
+        await handleStop();
+        voice.speakMessage('Recording stopped');
+      }
+    },
+    goHome: () => {
+      navigation.navigate('Home');
+    },
+  };
+
+  const voice = useVoiceModality('LectureCaptureScreen', commandHandlers, {
+    enableAutoTTS: true,
+  });
 
   // Animation refs for pulsing waveform
   const pulseAnim1 = useRef(new Animated.Value(1)).current;
@@ -258,15 +285,43 @@ export default function LectureCaptureScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <SpecialText style={styles.headerTitle}>Recording Lecture</SpecialText>
-        {!isRecording && (
-          <TouchableOpacity
-            style={styles.viewRecordingsButton}
-            onPress={() => navigation.navigate('RecordingsList')}
-          >
-            <SpecialText style={styles.viewRecordingsButtonText}><Text>📋</Text> View Recordings</SpecialText>
-          </TouchableOpacity>
-        )}
+        <View style={styles.headerActions}>
+          {!isRecording && (
+            <TouchableOpacity
+              style={styles.viewRecordingsButton}
+              onPress={() => navigation.navigate('RecordingsList')}
+            >
+              <SpecialText style={styles.viewRecordingsButtonText}><Text>📋</Text> View Recordings</SpecialText>
+            </TouchableOpacity>
+          )}
+          {voiceEnabled && (
+            <TouchableOpacity
+              style={[styles.micButton, voice.isListening && styles.micButtonListening]}
+              onPress={() => voice.isListening ? voice.stopListening() : voice.startListening()}
+              disabled={isProcessingChunk}
+            >
+              <Text style={styles.micButtonText}>{voice.isListening ? '🔴' : '🎤'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
+
+      {/* Voice Transcript Bubble */}
+      {voiceEnabled && voice.currentTranscript && !voice.error && (
+        <View style={styles.voiceTranscriptBubble}>
+          <SpecialText style={styles.voiceTranscriptText}>Heard: {voice.currentTranscript}</SpecialText>
+        </View>
+      )}
+
+      {/* Voice Error Bubble */}
+      {voiceEnabled && voice.error && (
+        <View style={styles.voiceErrorBubble}>
+          <SpecialText style={styles.voiceErrorText}>{voice.error}</SpecialText>
+          <TouchableOpacity onPress={() => { /* error will auto-dismiss */ }}>
+            <SpecialText style={styles.voiceErrorClose}>✕</SpecialText>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {isLoadingFiles && (
         <View style={styles.centerContainer}>
@@ -390,8 +445,14 @@ const styles = StyleSheet.create({
     color: '#000',
     textAlign: 'center',
   },
-  viewRecordingsButton: {
+  headerActions: {
     marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  viewRecordingsButton: {
     backgroundColor: '#e3f2fd',
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -403,6 +464,65 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#007AFF',
+  },
+  micButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  micButtonListening: {
+    backgroundColor: '#ffebee',
+    borderColor: '#ff4444',
+  },
+  micButtonText: {
+    fontSize: 20,
+  },
+  voiceTranscriptBubble: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+  },
+  voiceTranscriptText: {
+    fontSize: 13,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  voiceErrorBubble: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#ffebee',
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ff4444',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  voiceErrorText: {
+    fontSize: 13,
+    color: '#ff4444',
+    fontWeight: '500',
+    flex: 1,
+  },
+  voiceErrorClose: {
+    fontSize: 16,
+    color: '#ff4444',
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   content: {
     flex: 1,

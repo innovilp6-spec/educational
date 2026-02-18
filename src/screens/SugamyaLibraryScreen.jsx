@@ -21,6 +21,8 @@ import {
 } from 'react-native';
 import PrimaryButton from '../components/PrimaryButton';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import useVoiceModality from '../hooks/useVoiceModality';
+import { VoiceContext } from '../context/VoiceContext';
 import SpecialText from '../components/SpecialText';
 
 const COLORS = {
@@ -47,6 +49,10 @@ export default function SugamyaLibraryScreen() {
     requestSugamyaDownload,
   } = useTranscriptAPI();
 
+  // Get voice settings
+  const { settings } = React.useContext(VoiceContext);
+  const voiceEnabled = settings?.voiceEnabled ?? true;
+
   // State management
   const [activeTab, setActiveTab] = useState('search'); // 'search', 'popular', 'downloads', 'downloadRequests', 'history'
   const [searchResults, setSearchResults] = useState([]);
@@ -59,6 +65,43 @@ export default function SugamyaLibraryScreen() {
   const [bookDetailsModalVisible, setBookDetailsModalVisible] = useState(false);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   const [isRequestingDownload, setIsRequestingDownload] = useState(false);
+  const [selectedBookIndex, setSelectedBookIndex] = useState(0);
+
+  // Voice command handlers
+  const commandHandlers = {
+    nextBook: () => {
+      const bookList = activeTab === 'search' ? searchResults : activeTab === 'popular' ? popularBooks : [];
+      if (bookList.length > 0) {
+        setSelectedBookIndex((prev) => (prev + 1) % bookList.length);
+        voice.speakMessage(`Book ${(selectedBookIndex + 1) % bookList.length + 1}`);
+      }
+    },
+    previousBook: () => {
+      const bookList = activeTab === 'search' ? searchResults : activeTab === 'popular' ? popularBooks : [];
+      if (bookList.length > 0) {
+        setSelectedBookIndex((prev) => (prev === 0 ? bookList.length - 1 : prev - 1));
+        voice.speakMessage(`Book ${(selectedBookIndex === 0 ? bookList.length : selectedBookIndex)}`);
+      }
+    },
+    selectBook: () => {
+      const bookList = activeTab === 'search' ? searchResults : activeTab === 'popular' ? popularBooks : [];
+      if (bookList.length > 0 && selectedBookIndex < bookList.length) {
+        setSelectedBook(bookList[selectedBookIndex]);
+        setBookDetailsModalVisible(true);
+      }
+    },
+    search: () => {
+      setActiveTab('search');
+      voice.speakMessage('Switched to search');
+    },
+    home: () => {
+      navigation.navigate('Home');
+    },
+  };
+
+  const voice = useVoiceModality('SugamyaLibraryScreen', commandHandlers, {
+    enableAutoTTS: true,
+  });
 
   // Load user profile and search on mount
   useEffect(() => {
@@ -549,9 +592,36 @@ export default function SugamyaLibraryScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <SpecialText style={styles.headerTitle}><Text>📚</Text> Sugamya Pustakalaya</SpecialText>
-        <SpecialText style={styles.headerSubtitle}>Accessible Digital Library</SpecialText>
+        <View style={styles.headerContent}>
+          <SpecialText style={styles.headerTitle}><Text>📚</Text> Sugamya Pustakalaya</SpecialText>
+          <SpecialText style={styles.headerSubtitle}>Accessible Digital Library</SpecialText>
+        </View>
+        {voiceEnabled && (
+          <TouchableOpacity
+            style={[styles.micButton, voice.isListening && styles.micButtonListening]}
+            onPress={() => voice.isListening ? voice.stopListening() : voice.startListening()}
+          >
+            <Text style={styles.micButtonText}>{voice.isListening ? '🔴' : '🎤'}</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Voice Transcript Bubble */}
+      {voiceEnabled && voice.currentTranscript && !voice.error && (
+        <View style={styles.voiceTranscriptBubble}>
+          <SpecialText style={styles.voiceTranscriptText}>Heard: {voice.currentTranscript}</SpecialText>
+        </View>
+      )}
+
+      {/* Voice Error Bubble */}
+      {voiceEnabled && voice.error && (
+        <View style={styles.voiceErrorBubble}>
+          <SpecialText style={styles.voiceErrorText}>{voice.error}</SpecialText>
+          <TouchableOpacity onPress={() => { /* error will auto-dismiss */ }}>
+            <SpecialText style={styles.voiceErrorClose}>✕</SpecialText>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Tab Navigation */}
       <View style={styles.tabNavigation}>
@@ -645,6 +715,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerContent: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: 24,
@@ -655,6 +731,65 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 14,
     color: COLORS.textSecondary,
+  },
+  micButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  micButtonListening: {
+    backgroundColor: '#ffebee',
+    borderColor: '#ff4444',
+  },
+  micButtonText: {
+    fontSize: 18,
+  },
+  voiceTranscriptBubble: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+  },
+  voiceTranscriptText: {
+    fontSize: 13,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  voiceErrorBubble: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ff4444',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  voiceErrorText: {
+    fontSize: 13,
+    color: '#ff4444',
+    fontWeight: '500',
+    flex: 1,
+  },
+  voiceErrorClose: {
+    fontSize: 16,
+    color: '#ff4444',
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   tabNavigation: {
     flexDirection: 'row',

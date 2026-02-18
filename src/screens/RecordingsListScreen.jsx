@@ -2,12 +2,46 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, SafeAreaView } from 'react-native';
 import RNFS from 'react-native-fs';
 import { useNavigation } from '@react-navigation/native';
+import useVoiceModality from '../hooks/useVoiceModality';
+import { VoiceContext } from '../context/VoiceContext';
 import SpecialText from '../components/SpecialText';
 
 export default function RecordingListScreen() {
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
+  const { settings } = React.useContext(VoiceContext);
+  const voiceEnabled = settings?.voiceEnabled ?? true;
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Voice command handlers
+  const commandHandlers = {
+    selectRecording: () => {
+      if (recordings.length > 0 && selectedIndex < recordings.length) {
+        handleSelectRecording(recordings[selectedIndex]);
+      }
+    },
+    deleteRecording: () => {
+      if (recordings.length > 0 && selectedIndex < recordings.length) {
+        handleDeleteRecording(recordings[selectedIndex]);
+      }
+    },
+    nextRecording: () => {
+      setSelectedIndex((prev) => (prev + 1) % recordings.length);
+      voice.speakMessage(`Recording ${(selectedIndex + 1) % recordings.length + 1}`);
+    },
+    previousRecording: () => {
+      setSelectedIndex((prev) => (prev === 0 ? recordings.length - 1 : prev - 1));
+      voice.speakMessage(`Recording ${(selectedIndex === 0 ? recordings.length : selectedIndex)}`);
+    },
+    goHome: () => {
+      navigation.navigate('Home');
+    },
+  };
+
+  const voice = useVoiceModality('RecordingsListScreen', commandHandlers, {
+    enableAutoTTS: true,
+  });
 
   // Load recordings when the screen loads
   useEffect(() => {
@@ -147,9 +181,36 @@ export default function RecordingListScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <SpecialText style={styles.headerTitle}>Your Recordings</SpecialText>
-        <SpecialText style={styles.headerSubtitle}>{recordings.length} saved</SpecialText>
+        <View style={styles.headerTextContainer}>
+          <SpecialText style={styles.headerTitle}>Your Recordings</SpecialText>
+          <SpecialText style={styles.headerSubtitle}>{recordings.length} saved</SpecialText>
+        </View>
+        {voiceEnabled && (
+          <TouchableOpacity
+            style={[styles.micButton, voice.isListening && styles.micButtonListening]}
+            onPress={() => voice.isListening ? voice.stopListening() : voice.startListening()}
+          >
+            <Text style={styles.micButtonText}>{voice.isListening ? '🔴' : '🎤'}</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Voice Transcript Bubble */}
+      {voiceEnabled && voice.currentTranscript && !voice.error && (
+        <View style={styles.voiceTranscriptBubble}>
+          <SpecialText style={styles.voiceTranscriptText}>Heard: {voice.currentTranscript}</SpecialText>
+        </View>
+      )}
+
+      {/* Voice Error Bubble */}
+      {voiceEnabled && voice.error && (
+        <View style={styles.voiceErrorBubble}>
+          <SpecialText style={styles.voiceErrorText}>{voice.error}</SpecialText>
+          <TouchableOpacity onPress={() => { /* error will auto-dismiss */ }}>
+            <SpecialText style={styles.voiceErrorClose}>✕</SpecialText>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Empty State */}
       {!loading && recordings.length === 0 && (
@@ -186,6 +247,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTextContainer: {
+    flex: 1,
     alignItems: 'center',
   },
   headerTitle: {
@@ -199,6 +266,65 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     fontWeight: '500',
+  },
+  micButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  micButtonListening: {
+    backgroundColor: '#ffebee',
+    borderColor: '#ff4444',
+  },
+  micButtonText: {
+    fontSize: 18,
+  },
+  voiceTranscriptBubble: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+  },
+  voiceTranscriptText: {
+    fontSize: 13,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  voiceErrorBubble: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ff4444',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  voiceErrorText: {
+    fontSize: 13,
+    color: '#ff4444',
+    fontWeight: '500',
+    flex: 1,
+  },
+  voiceErrorClose: {
+    fontSize: 16,
+    color: '#ff4444',
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   emptyContainer: {
     flex: 1,

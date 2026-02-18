@@ -11,6 +11,9 @@ import {
     TextInput,
 } from 'react-native';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import useVoiceModality from '../hooks/useVoiceModality';
+import useSimpleSTT from '../hooks/useSimpleSTT';
+import { VoiceContext } from '../context/VoiceContext';
 import PrimaryButton from '../components/PrimaryButton';
 import InfoButton from '../components/InfoButton';
 import { NAMING_NOMENCLATURE, DETAILED_GUIDELINES, validateName } from '../utils/namingNomenclature';
@@ -30,8 +33,35 @@ export default function NotesScreen({ navigation }) {
         topic: '',
         tags: '',
     });
+    const { settings } = React.useContext(VoiceContext);
+    const voiceEnabled = settings?.voiceEnabled ?? true;
 
     const { getUserNotes, createNote, deleteNote } = useTranscriptAPI();
+
+    // Voice hooks for note creation
+    const stt = useSimpleSTT({
+        onTranscript: (transcript) => {
+            setNewNoteData({ ...newNoteData, content: (newNoteData.content ? newNoteData.content + ' ' : '') + transcript });
+        },
+        autoSubmitOnSilence: false,
+    });
+
+    const commandHandlers = {
+        saveNote: async () => {
+            await handleCreateNote();
+        },
+        newNote: () => {
+            setShowCreateForm(true);
+        },
+        clearText: () => {
+            setNewNoteData({ ...newNoteData, content: '' });
+            voice.speakMessage('Content cleared');
+        },
+    };
+
+    const voice = useVoiceModality('NotesScreen', commandHandlers, {
+        enableAutoTTS: true,
+    });
 
     // Load notes on mount
     useEffect(() => {
@@ -214,14 +244,42 @@ export default function NotesScreen({ navigation }) {
                         <SpecialText style={styles.backButtonText}>← Back</SpecialText>
                     </TouchableOpacity>
                     <SpecialText style={styles.formTitle}>Create New Note</SpecialText>
-                    <InfoButton
-                        title={guidelines.title}
-                        rules={guidelines.rules}
-                        tips={guidelines.tips}
-                        size={20}
-                        color="#007AFF"
-                    />
+                    <View style={styles.formHeaderActions}>
+                        {voiceEnabled && (
+                            <TouchableOpacity
+                                style={[styles.micButton, stt.isListening && styles.micButtonListening]}
+                                onPress={() => stt.isListening ? stt.stopListening() : stt.startListening()}
+                                disabled={isLoading}
+                            >
+                                <Text style={styles.micButtonText}>{stt.isListening ? '🔴' : '🎤'}</Text>
+                            </TouchableOpacity>
+                        )}
+                        <InfoButton
+                            title={guidelines.title}
+                            rules={guidelines.rules}
+                            tips={guidelines.tips}
+                            size={20}
+                            color="#007AFF"
+                        />
+                    </View>
                 </View>
+
+                {/* Voice Transcript Bubble */}
+                {voiceEnabled && stt.transcript && !stt.error && (
+                    <View style={styles.voiceTranscriptBubble}>
+                        <SpecialText style={styles.voiceTranscriptText}>Heard: {stt.transcript}</SpecialText>
+                    </View>
+                )}
+
+                {/* Voice Error Bubble */}
+                {voiceEnabled && stt.error && (
+                    <View style={styles.voiceErrorBubble}>
+                        <SpecialText style={styles.voiceErrorText}>{stt.error}</SpecialText>
+                        <TouchableOpacity onPress={() => { /* error will auto-dismiss */ }}>
+                            <SpecialText style={styles.voiceErrorClose}>✕</SpecialText>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 <ScrollView style={styles.formContainer}>
                     {/* Nomenclature Pattern Display */}
@@ -696,5 +754,69 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderTopWidth: 1,
         borderTopColor: '#eee',
+    },
+    formHeaderActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    micButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd',
+    },
+    micButtonListening: {
+        backgroundColor: '#ffebee',
+        borderColor: '#ff4444',
+    },
+    micButtonText: {
+        fontSize: 18,
+    },
+    voiceTranscriptBubble: {
+        marginHorizontal: 16,
+        marginTop: 8,
+        marginBottom: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        backgroundColor: '#e3f2fd',
+        borderRadius: 12,
+        borderLeftWidth: 3,
+        borderLeftColor: '#007AFF',
+    },
+    voiceTranscriptText: {
+        fontSize: 13,
+        color: '#007AFF',
+        fontWeight: '500',
+    },
+    voiceErrorBubble: {
+        marginHorizontal: 16,
+        marginTop: 8,
+        marginBottom: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        backgroundColor: '#ffebee',
+        borderRadius: 12,
+        borderLeftWidth: 3,
+        borderLeftColor: '#ff4444',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    voiceErrorText: {
+        fontSize: 13,
+        color: '#ff4444',
+        fontWeight: '500',
+        flex: 1,
+    },
+    voiceErrorClose: {
+        fontSize: 16,
+        color: '#ff4444',
+        fontWeight: 'bold',
+        marginLeft: 8,
     },
 });

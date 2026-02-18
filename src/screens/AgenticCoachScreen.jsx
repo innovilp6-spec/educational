@@ -12,6 +12,7 @@ import {
     Alert,
     Modal,
     FlatList,
+    Animated,
 } from 'react-native';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
 import { QuizMessageBubble, QuizResultsBubble } from '../components/QuizMessageBubble';
@@ -20,6 +21,8 @@ import FloatingActionMenu from '../components/FloatingActionMenu';
 import { useFocusEffect } from '@react-navigation/native';
 import FloatingSettingsButton from '../components/FloatingSettingsButton';
 import SpecialText from '../components/SpecialText';
+import useVoiceModality from '../hooks/useVoiceModality';
+import { VoiceContext } from '../context/VoiceContext';
 
 export default function AgenticCoachScreen({ route, navigation }) {
     console.log('[COACH-COMPONENT] ===== COMPONENT RENDERING =====');
@@ -27,6 +30,8 @@ export default function AgenticCoachScreen({ route, navigation }) {
 
     const { transcriptId, sessionName, transcript, contextType } = route.params || {};
     const { servicePreferences } = useConfig();
+    const { settings } = React.useContext(VoiceContext);
+    const voiceEnabled = settings?.voiceEnabled ?? true;
     console.log('[COACH-INIT] Route params received:', { transcriptId, sessionName, contextType });
     console.log('[COACH-INIT] sessionName value:', sessionName);
     console.log('[COACH-INIT] sessionName type:', typeof sessionName);
@@ -65,6 +70,110 @@ export default function AgenticCoachScreen({ route, navigation }) {
     // Scroll reference
     const scrollViewRef = useRef(null);
     const loadAbortController = useRef(null);
+
+    /**
+     * Voice Command Handlers
+     */
+    const voiceCommandHandlers = {
+        nextQuestion: async ({ parsed }) => {
+            console.log('[VOICE] Execute: nextQuestion');
+            // This would navigate to next question in a quiz context
+            // For now, we'll show a message since coach doesn't have "next question" concept
+            voice.speakMessage('I understand you want the next question. Please specify what you\'d like to learn about.');
+            return { action: 'nextQuestion' };
+        },
+
+        previousQuestion: async ({ parsed }) => {
+            console.log('[VOICE] Execute: previousQuestion');
+            voice.speakMessage('I understand you want to review the previous question. What would you like to go back to?');
+            return { action: 'previousQuestion' };
+        },
+
+        submitAnswer: async ({ parsed }) => {
+            console.log('[VOICE] Execute: submitAnswer');
+            // Trigger message send if there's input
+            if (userInput.trim()) {
+                await sendMessage();
+            } else {
+                voice.speakMessage('I don\'t see any answer to submit. Please provide an answer first.');
+            }
+            return { action: 'submitAnswer' };
+        },
+
+        repeatQuestion: async ({ parsed }) => {
+            console.log('[VOICE] Execute: repeatQuestion');
+            // Read the last coach message
+            const lastCoachMessage = messages.filter(m => m.type === 'coach').pop();
+            if (lastCoachMessage) {
+                await voice.speakMessage(lastCoachMessage.text);
+                return { action: 'repeatQuestion' };
+            } else {
+                voice.speakMessage('There\'s no previous question to repeat.');
+                return { action: 'repeatQuestion', error: 'no_message' };
+            }
+        },
+
+        showHint: async ({ parsed }) => {
+            console.log('[VOICE] Execute: showHint');
+            const hintMessage = 'I can help you with a hint. What specific topic would you like a hint about?';
+            setMessages(prev => [...prev, {
+                id: `coach-${Date.now()}`,
+                type: 'coach',
+                text: hintMessage,
+                timestamp: new Date(),
+            }]);
+            voice.speakMessage(hintMessage);
+            return { action: 'showHint' };
+        },
+
+        readQuestion: async ({ parsed }) => {
+            console.log('[VOICE] Execute: readQuestion');
+            // Read the last coach message (the "question")
+            const lastCoachMessage = messages.filter(m => m.type === 'coach').pop();
+            if (lastCoachMessage) {
+                await voice.speakMessage(lastCoachMessage.text);
+                return { action: 'readQuestion' };
+            } else {
+                voice.speakMessage('There\'s no question to read. Ask me something first.');
+                return { action: 'readQuestion', error: 'no_message' };
+            }
+        },
+
+        goHome: async ({ parsed, navigation }) => {
+            console.log('[VOICE] Execute: goHome');
+            voice.speakMessage('Going home');
+            setTimeout(() => navigation.navigate('Home'), 500);
+            return { action: 'goHome' };
+        },
+
+        goBack: async ({ parsed, navigation }) => {
+            console.log('[VOICE] Execute: goBack');
+            voice.speakMessage('Going back');
+            setTimeout(() => navigation.goBack(), 500);
+            return { action: 'goBack' };
+        },
+
+        openSettings: async ({ parsed, navigation }) => {
+            console.log('[VOICE] Execute: openSettings');
+            voice.speakMessage('Opening settings');
+            return { action: 'openSettings' };
+        },
+    };
+
+    // Voice modality hook
+    const voice = useVoiceModality('AgenticCoach', voiceCommandHandlers, {
+        enableAutoTTS: true,
+        confirmDestructive: true,
+        onCommandRecognized: (cmd) => {
+            console.log('[COACH-VOICE] Command recognized:', cmd.parsed.intent);
+        },
+        onCommandExecuted: (cmd) => {
+            console.log('[COACH-VOICE] Command executed:', cmd.intent);
+        },
+        onError: (error) => {
+            console.error('[COACH-VOICE] Error:', error);
+        },
+    });
 
     // Load conversation history on mount and when context ID changes
     useFocusEffect(useCallback(() => {
@@ -743,16 +852,46 @@ export default function AgenticCoachScreen({ route, navigation }) {
                             <Text style={styles.sendButtonText}>⬆</Text>
                         )}
                     </TouchableOpacity>
-                ) : (
+                ) : voiceEnabled ? (
                     <TouchableOpacity
-                        style={styles.micButton}
-                        disabled={isLoading}
-                        activeOpacity={0.7}
+                        style={[
+                            styles.micButton,
+                            voice.isListening && styles.micButtonListening,
+                        ]}
+                        onPress={() => {
+                            if (voice.isListening) {
+                                voice.stopListening();
+                            } else {
+                                voice.startListening();
+                            }
+                        }}
+                        disabled={isLoading || voice.isListening}
+                        activeOpacity={voice.isListening ? 1 : 0.7}
                     >
-                        <Text style={styles.micButtonIcon}>🎤</Text>
+                        <Text style={styles.micButtonIcon}>
+                            {voice.isListening ? '🔴' : '🎤'}
+                        </Text>
                     </TouchableOpacity>
-                )}
+                ) : null}
             </View>
+
+            {/* Voice Transcript Bubble */}
+            {voiceEnabled && voice.currentTranscript && !voice.error && (
+                <View style={styles.voiceTranscriptBubble}>
+                    <Text style={styles.voiceTranscriptLabel}>Heard:</Text>
+                    <SpecialText style={styles.voiceTranscriptText}>{voice.currentTranscript}</SpecialText>
+                </View>
+            )}
+
+            {/* Voice Error Bubble */}
+            {voiceEnabled && voice.error && (
+                <View style={styles.voiceErrorBubble}>
+                    <SpecialText style={styles.voiceErrorText}>{voice.error}</SpecialText>
+                    <TouchableOpacity onPress={voice.clearError} style={styles.voiceErrorDismiss}>
+                        <Text style={styles.voiceErrorDismissText}>✕</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
 
             {/* Context Suggestions Modal */}
             <Modal
@@ -1025,8 +1164,60 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    micButtonListening: {
+        backgroundColor: '#ffcdd2',
+        borderColor: '#ef5350',
+        borderWidth: 2,
+    },
     micButtonIcon: {
         fontSize: 20,
+    },
+    voiceTranscriptBubble: {
+        backgroundColor: '#e3f2fd',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        marginHorizontal: 12,
+        marginBottom: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#2196f3',
+    },
+    voiceTranscriptLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#1976d2',
+        marginBottom: 4,
+    },
+    voiceTranscriptText: {
+        fontSize: 14,
+        color: '#333',
+        fontStyle: 'italic',
+    },
+    voiceErrorBubble: {
+        backgroundColor: '#ffebee',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        marginHorizontal: 12,
+        marginBottom: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#ef5350',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    voiceErrorText: {
+        fontSize: 13,
+        color: '#c62828',
+        flex: 1,
+    },
+    voiceErrorDismiss: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    voiceErrorDismissText: {
+        fontSize: 18,
+        color: '#c62828',
     },
     // Context Suggestions Modal Styles
     modalOverlay: {

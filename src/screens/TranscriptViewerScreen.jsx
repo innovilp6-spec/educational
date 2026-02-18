@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import RNFS from 'react-native-fs';
 import useTranscriptAPI from '../hooks/useTranscriptAPI';
+import useVoiceModality from '../hooks/useVoiceModality';
+import { VoiceContext } from '../context/VoiceContext';
 import FloatingActionMenu from '../components/FloatingActionMenu';
 import { useAuth } from '../context/AuthContext';
 import SpecialText from '../components/SpecialText';
@@ -11,11 +13,34 @@ const SERVER_BASE_URL = 'http://10.0.2.2:5000';
 export default function TranscriptViewerScreen({ route, navigation }) {
     const { sessionName, transcript, transcriptId } = route.params;
     const [displayTranscript] = useState(transcript || '');
+    const { settings } = React.useContext(VoiceContext);
+    const voiceEnabled = settings?.voiceEnabled ?? true;
     const [summary, setSummary] = useState('');
     const [isLoadingSummary, setIsLoadingSummary] = useState(false);
     const [summaryFolderPath, setSummaryFolderPath] = useState(null);
     const { generateSummary } = useTranscriptAPI();
     const { getUserEmail } = useAuth();
+
+    // Voice command handlers
+    const commandHandlers = {
+        generateSummary: async () => {
+            if (summary && summary.trim().length > 0) {
+                voice.speakMessage('Summary already exists');
+                return;
+            }
+            await handleGenerateSummary();
+        },
+        goHome: () => {
+            navigation.navigate('Home');
+        },
+        goBack: () => {
+            navigation.goBack();
+        },
+    };
+
+    const voice = useVoiceModality('TranscriptViewerScreen', commandHandlers, {
+        enableAutoTTS: true,
+    });
 
     useEffect(() => {
         initializeSummaryFolder();
@@ -152,7 +177,32 @@ export default function TranscriptViewerScreen({ route, navigation }) {
             {/* Header */}
             <View style={styles.header}>
                 <SpecialText style={styles.title}>{sessionName}</SpecialText>
+                {voiceEnabled && (
+                    <TouchableOpacity
+                        style={[styles.micButton, voice.isListening && styles.micButtonListening]}
+                        onPress={() => voice.isListening ? voice.stopListening() : voice.startListening()}
+                    >
+                        <Text style={styles.micButtonText}>{voice.isListening ? '🔴' : '🎤'}</Text>
+                    </TouchableOpacity>
+                )}
             </View>
+
+            {/* Voice Transcript Bubble */}
+            {voiceEnabled && voice.currentTranscript && !voice.error && (
+                <View style={styles.voiceTranscriptBubble}>
+                    <SpecialText style={styles.voiceTranscriptText}>Heard: {voice.currentTranscript}</SpecialText>
+                </View>
+            )}
+
+            {/* Voice Error Bubble */}
+            {voiceEnabled && voice.error && (
+                <View style={styles.voiceErrorBubble}>
+                    <SpecialText style={styles.voiceErrorText}>{voice.error}</SpecialText>
+                    <TouchableOpacity onPress={() => { /* error will auto-dismiss */ }}>
+                        <SpecialText style={styles.voiceErrorClose}>✕</SpecialText>
+                    </TouchableOpacity>
+                </View>
+            )}
 
             <View style={styles.contentContainer}>
                 {/* Summary Card - Top Half (Pinned Scrollable) */}
@@ -227,12 +277,75 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#f0f0f0',
         alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 12,
     },
     title: { 
         fontSize: 22, 
         fontWeight: '700',
         color: '#000',
         textAlign: 'center',
+        flex: 1,
+    },
+    micButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd',
+    },
+    micButtonListening: {
+        backgroundColor: '#ffebee',
+        borderColor: '#ff4444',
+    },
+    micButtonText: {
+        fontSize: 18,
+    },
+    voiceTranscriptBubble: {
+        marginHorizontal: 16,
+        marginTop: 4,
+        marginBottom: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        backgroundColor: '#e3f2fd',
+        borderRadius: 12,
+        borderLeftWidth: 3,
+        borderLeftColor: '#007AFF',
+    },
+    voiceTranscriptText: {
+        fontSize: 13,
+        color: '#007AFF',
+        fontWeight: '500',
+    },
+    voiceErrorBubble: {
+        marginHorizontal: 16,
+        marginTop: 4,
+        marginBottom: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        backgroundColor: '#ffebee',
+        borderRadius: 12,
+        borderLeftWidth: 3,
+        borderLeftColor: '#ff4444',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    voiceErrorText: {
+        fontSize: 13,
+        color: '#ff4444',
+        fontWeight: '500',
+        flex: 1,
+    },
+    voiceErrorClose: {
+        fontSize: 16,
+        color: '#ff4444',
+        fontWeight: 'bold',
+        marginLeft: 8,
     },
     contentContainer: {
         flex: 1,
