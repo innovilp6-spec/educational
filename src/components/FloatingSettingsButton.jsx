@@ -22,6 +22,7 @@ import { useConfig } from '../hooks/useConfig';
 import { useAuth } from '../context/AuthContext';
 import PrimaryButton from './PrimaryButton';
 import SpecialText from './SpecialText';
+import DyslexiaGuideModal from './DyslexiaGuideModal';
 import { Picker } from '@react-native-picker/picker';
 import apiService from '../services/apiService';
 
@@ -33,6 +34,7 @@ export default function FloatingSettingsButton() {
   const [selectedGrade, setSelectedGrade] = useState(getUserGrade());
   const [isUpdatingGrade, setIsUpdatingGrade] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [dyslexiaGuideVisible, setDyslexiaGuideVisible] = useState(false);
 
   
   const {
@@ -158,6 +160,24 @@ export default function FloatingSettingsButton() {
     }
   };
 
+  const handleApplyDyslexiaRecommendations = (recommendedPreferences) => {
+    Object.keys(recommendedPreferences).forEach((preference) => {
+      const userEmail = getUserEmail();
+      if (userEmail && recommendedPreferences[preference] !== servicePreferences[preference]) {
+        updateServicePreference(
+          userEmail,
+          preference,
+          recommendedPreferences[preference],
+          servicePreferences
+        );
+      }
+    });
+    Alert.alert(
+      'Recommendations Applied',
+      'Service preferences have been updated based on your dyslexia type. You can still customize them as needed.'
+    );
+  };
+
   const toggleServicePreference = async (preference) => {
     try {
       const userEmail = getUserEmail();
@@ -270,7 +290,15 @@ export default function FloatingSettingsButton() {
 
             {/* SERVICE PREFERENCES SECTION */}
             <View style={styles.educationCard}>
-              <SpecialText style={styles.sectionTitle}><Text>⚙️</Text> Service Preferences</SpecialText>
+              <View style={styles.sectionHeader}>
+                <SpecialText style={styles.sectionTitle}><Text>⚙️</Text> Service Preferences</SpecialText>
+                <TouchableOpacity
+                  style={styles.infoBut}
+                  onPress={() => setDyslexiaGuideVisible(true)}
+                >
+                  <Text style={styles.infoButtonText}>ℹ️</Text>
+                </TouchableOpacity>
+              </View>
 
               <SpecialText
                 style={styles.description}
@@ -450,6 +478,14 @@ export default function FloatingSettingsButton() {
           </View>
         </SafeAreaView>
       </Modal>
+
+      {/* Dyslexia Guide Modal */}
+      <DyslexiaGuideModal
+        visible={dyslexiaGuideVisible}
+        onClose={() => setDyslexiaGuideVisible(false)}
+        onApplyRecommendations={handleApplyDyslexiaRecommendations}
+        servicePreferences={servicePreferences}
+      />
     </>
   );
 }
@@ -591,12 +627,32 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#333333',
-    marginBottom: 12,
+    flex: 1,
     paddingLeft: 4,
+  },
+  infoBut: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginLeft: 8,
+  },
+  infoButtonText: {
+    fontSize: 16,
   },
   profileValue: {
     fontSize: 14,

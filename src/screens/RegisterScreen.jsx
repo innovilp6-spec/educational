@@ -20,6 +20,7 @@ import {
 import { useDispatch } from 'react-redux';
 import { Picker } from '@react-native-picker/picker';
 import PrimaryButton from '../components/PrimaryButton';
+import DyslexiaGuideModal from '../components/DyslexiaGuideModal';
 import { useAuth } from '../context/AuthContext';
 import { setServicePreferences as dispatchSetServicePreferences } from '../store/slices/configSlice';
 
@@ -78,6 +79,7 @@ export default function RegisterScreen({ navigation }) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [activeStep, setActiveStep] = useState('basic'); // basic, education, services, formats
+  const [dyslexiaGuideVisible, setDyslexiaGuideVisible] = useState(false);
 
   // Validation
   const isBasicValid = name.trim() && email.trim() && password && confirmPassword && password === confirmPassword;
@@ -90,6 +92,15 @@ export default function RegisterScreen({ navigation }) {
       ...prev,
       [preference]: !prev[preference],
     }));
+  };
+
+  // Apply dyslexia recommendations
+  const handleApplyDyslexiaRecommendations = (recommendedPreferences) => {
+    setServicePreferences(recommendedPreferences);
+    Alert.alert(
+      'Recommendations Applied',
+      'Service preferences have been updated based on your dyslexia type. You can still customize them as needed.'
+    );
   };
 
   // Toggle format preference
@@ -375,7 +386,15 @@ export default function RegisterScreen({ navigation }) {
         {/* Service Preferences Selection */}
         {activeStep === 'services' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Select Your Services</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Select Your Services</Text>
+              <TouchableOpacity
+                style={styles.infoButton}
+                onPress={() => setDyslexiaGuideVisible(true)}
+              >
+                <Text style={styles.infoButtonText}>ℹ️</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.description}>
               Choose which services you'd like to use. These can be updated anytime.
             </Text>
@@ -569,6 +588,14 @@ export default function RegisterScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+
+      {/* Dyslexia Guide Modal */}
+      <DyslexiaGuideModal
+        visible={dyslexiaGuideVisible}
+        onClose={() => setDyslexiaGuideVisible(false)}
+        onApplyRecommendations={handleApplyDyslexiaRecommendations}
+        servicePreferences={servicePreferences}
+      />
     </SafeAreaView>
   );
 }
@@ -627,11 +654,31 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 32,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#000000',
-    marginBottom: 12,
+    flex: 1,
+  },
+  infoButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginLeft: 8,
+  },
+  infoButtonText: {
+    fontSize: 18,
   },
   description: {
     fontSize: 13,
